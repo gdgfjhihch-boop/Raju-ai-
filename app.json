@@ -1,13 +1,14 @@
 {
   "expo": {
     "name": "Munim AI",
-    "slug": "munim-ai",
+    "slug": "raju-ai",
     "version": "1.0.0",
     "android": {
-      "package": "com.munim.ai"
+      "package": "com.raju.ai"
     },
     "plugins": [
-      "expo-file-system"
+      "expo-file-system",
+      "llama.rn"
     ]
   }
 }
