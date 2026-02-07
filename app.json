@@ -1,0 +1,14 @@
+{
+  "expo": {
+    "name": "Munim AI",
+    "slug": "munim-ai",
+    "version": "1.0.0",
+    "android": {
+      "package": "com.munim.ai"
+    },
+    "plugins": [
+      ["llama.rn", { "n_threads": 4 }],
+      "expo-file-system"
+    ]
+  }
+}
