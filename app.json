@@ -7,7 +7,6 @@
       "package": "com.munim.ai"
     },
     "plugins": [
-      ["llama.rn", { "n_threads": 4 }],
       "expo-file-system"
     ]
   }
