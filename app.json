@@ -8,8 +8,13 @@
     },
     "plugins": [
       "expo-file-system",
-      "llama.rn"
+      [
+        "llama.rn",
+        {
+          "enableEntitlements": true,
+          "forceCxx20": true
+        }
+      ]
     ]
   }
 }
-
