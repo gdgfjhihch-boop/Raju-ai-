@@ -1,20 +1,25 @@
 {
   "expo": {
-    "name": "Munim AI",
-    "slug": "raju-ai",
+    "name": "Universal AI Player",
+    "slug": "ai-player",
     "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
     "android": {
-      "package": "com.raju.ai"
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#ffffff"
+      },
+      "package": "com.raju.aiplayer"
     },
     "plugins": [
-      "expo-file-system",
-      [
-        "llama.rn",
-        {
-          "enableEntitlements": true,
-          "forceCxx20": true
-        }
-      ]
+      "expo-file-system"
     ]
   }
 }
