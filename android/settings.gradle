@@ -1,0 +1,5 @@
+rootProject.name = 'RajuAiAgent'
+
+apply from: new File(["node", "--print", "require.resolve('react-native/package.json')"].execute(null, rootDir).text.trim(), "../react-native/react.gradle")
+
+include ':app'
