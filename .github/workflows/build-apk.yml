@@ -1,101 +1,29 @@
-name: Build Raju-ai- APK
-
+name: Build Android APK
 on:
   push:
-    branches:
-      - main
-  workflow_dispatch:
+    branches: [ main ]
 
 jobs:
   build:
     runs-on: ubuntu-latest
-    
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v3
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v3
         with:
-          node-version: '18'
-          cache: 'pnpm'
-
-      - name: Install pnpm
-        run: npm install -g pnpm
-
-      - name: Install dependencies
-        run: pnpm install
+          node-version: 18
 
       - name: Setup Expo
         uses: expo/expo-github-action@v8
         with:
           expo-version: latest
-          eas-version: latest
           token: ${{ secrets.EXPO_TOKEN }}
 
-      - name: Verify build configuration
-        run: |
-          echo "✅ Checking gradle.properties..."
-          cat android/gradle.properties
-          echo "✅ Checking app.config.ts..."
-          head -20 app.config.ts
+      - name: Install dependencies
+        run: npm install
 
-      - name: Build APK with EAS
-        run: eas build --platform android --type apk --non-interactive
-        env:
-          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
-
-      - name: Upload APK artifact
-        uses: actions/upload-artifact@v3
-        with:
-          name: raju-ai-apk
-          path: '*.apk'
-          retention-days: 30
-
-      - name: Create Release
-        if: success()
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tag_name: v1.0.0-${{ github.run_number }}
-          release_name: Raju-ai- Agent v1.0.0 Build ${{ github.run_number }}
-          body: |
-            ## Raju-ai- Hybrid AI Agent v1.0.0
-            
-            **Build Details:**
-            - Build Number: ${{ github.run_number }}
-            - Commit: ${{ github.sha }}
-            - Branch: ${{ github.ref }}
-            
-            **Features:**
-            - Autonomous AI reasoning (Plan → Execute → Reflect)
-            - Hybrid offline (GGUF) and cloud (API) modes
-            - Vector memory with learning system
-            - Real-time thought stream visualization
-            - Secure API key vault
-            
-            **Installation:**
-            1. Download the APK from the artifacts
-            2. Enable "Unknown Sources" in Android Settings
-            3. Install the APK
-            4. Grant permissions
-            5. Launch the app
-            
-            **System Requirements:**
-            - Android 10 or higher
-            - ~100MB free storage
-            - Internet connection (for cloud mode)
-          draft: false
-          prerelease: false
-
-      - name: Build Status
-        if: always()
-        run: |
-          if [ "${{ job.status }}" == "success" ]; then
-            echo "✅ Build completed successfully!"
-            echo "📦 APK is ready for download"
-          else
-            echo "❌ Build failed"
-            exit 1
-          fi
+      - name: Build APK (EAS)
+        run: npx eas-build --platform android --profile preview --non-interactive
+        

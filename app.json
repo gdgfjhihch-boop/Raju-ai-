@@ -1,0 +1,13 @@
+{
+  "expo": {
+    "name": "Raju AI Player",
+    "slug": "raju-ai",
+    "version": "1.0.0",
+    "plugins": [
+      "expo-file-system"
+    ],
+    "android": {
+      "package": "com.raju.aiplayer"
+    }
+  }
+}
