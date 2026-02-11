@@ -66,7 +66,10 @@
 - [x] Add loading states and animations
 
 ## Phase 8: Build & Deployment
-- [ ] Configure gradle.properties with memory settings
+- [x] Configure gradle.properties with memory settings (4GB JVM)
+- [x] Create EAS build configuration for APK
+- [x] Integrate all 5 screens with tab navigation
+- [x] Optimize images and assets (<50MB target)
 - [ ] Test offline mode with local GGUF model
 - [ ] Test cloud mode with API keys
 - [ ] Verify APK size (<50MB)
