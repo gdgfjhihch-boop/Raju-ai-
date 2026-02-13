@@ -15,11 +15,6 @@ react {
     hermesCommand = new File(nodeModulesPath, "react-native/sdks/hermesc/%OS-BIN%/hermesc")
     codegenDir = new File(nodeModulesPath, "@react-native/codegen")
 
-    // Use Expo CLI to bundle the app, this ensures the Metro config
-    // works correctly with Expo projects.
-    cliFile = new File(nodeModulesPath, "@expo/cli/build/bin/cli")
-    bundleCommand = "export:embed"
-
     /* Folders */
      //   The root of your project, i.e. where "package.json" lives. Default is '../..'
     // root = file("../../")
