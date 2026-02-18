@@ -3,7 +3,6 @@ apply plugin: "org.jetbrains.kotlin.android"
 apply plugin: "com.facebook.react"
 
 def projectRoot = rootDir.getAbsoluteFile().getParentFile().getAbsolutePath()
-// Use a more robust way to find node_modules, checking both relative to projectRoot and projectDir
 def nodeModulesPath = new File(projectRoot, "node_modules").exists() ? 
     new File(projectRoot, "node_modules").absolutePath : 
     new File(projectDir, "../../node_modules").absolutePath
@@ -15,7 +14,7 @@ def nodeModulesPath = new File(projectRoot, "node_modules").exists() ?
 react {
     entryFile = file("../../index.js")
     reactNativeDir = new File(nodeModulesPath, "react-native")
-    hermesCommand = new File(nodeModulesPath, "react-native/sdks/hermesc/%OS-BIN%/hermesc")
+    hermesCommand = new File(nodeModulesPath, "react-native/sdks/hermesc/%OS-BIN%/hermesc").absolutePath
     codegenDir = new File(nodeModulesPath, "@react-native/codegen")
 
     // Use Expo CLI to bundle the app, this ensures the Metro config
