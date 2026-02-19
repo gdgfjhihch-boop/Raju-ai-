@@ -1,25 +1,46 @@
 name: AI Player Build 🚀
 on: [push, workflow_dispatch]
+
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-java@v4
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Java 17
+        uses: actions/setup-java@v4
         with:
           distribution: 'zulu'
           java-version: '17'
-      - uses: actions/setup-node@v4
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
         with:
           node-version: '20'
-      - run: npm install
-      - run: npx expo prebuild --platform android
-      - name: Build Android App
+
+      - name: Install Dependencies
+        run: npm install
+
+      - name: Create node_modules symlink in android folder
+        # यह स्टेप लाइन 12 वाले 'Path may not be null' एरर को जड़ से खत्म कर देगा
+        run: |
+          mkdir -p android
+          ln -s ../node_modules android/node_modules
+
+      - name: Run Expo Prebuild
+        run: npx expo prebuild --platform android
+
+      - name: Build Android App (APK)
         run: |
           cd android
           chmod +x gradlew
-          ./gradlew assembleDebug --no-daemon -Dorg.gradle.jvmargs=-Xmx4g
-      - uses: actions/upload-artifact@v4
+          # पुराना कैश साफ़ करना और 4GB RAM के साथ बिल्ड करना
+          ./gradlew clean
+          ./gradlew assembleDebug --no-daemon -Dorg.gradle.jvmargs=-Xmx4096m
+
+      - name: Upload APK Artifact
+        uses: actions/upload-artifact@v4
         with:
           name: universal-ai-player-apk
           path: android/app/build/outputs/apk/debug/app-debug.apk
