@@ -34,13 +34,14 @@ allprojects {
         maven { url 'https://www.jitpack.io' }
     }
 
-    configurations.all {
+        configurations.all {
         resolutionStrategy {
-            force "org.jetbrains.kotlin:kotlin-stdlib:$kotlinVersion"
-            force "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlinVersion"
-            force "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlinVersion"
-            force "org.jetbrains.kotlin:kotlin-stdlib-common:$kotlinVersion"
-            force "org.jetbrains.kotlin:kotlin-reflect:$kotlinVersion"
+            // हमने यहाँ सीधे '1.9.25' लिख दिया है ताकि वेरिएबल एरर न आए
+            force "org.jetbrains.kotlin:kotlin-stdlib:1.9.25"
+            force "org.jetbrains.kotlin:kotlin-stdlib-jdk7:1.9.25"
+            force "org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.9.25"
+            force "org.jetbrains.kotlin:kotlin-stdlib-common:1.9.25"
+            force "org.jetbrains.kotlin:kotlin-reflect:1.9.25"
         }
-    }
-}
+        }
+    
