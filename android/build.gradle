@@ -29,19 +29,20 @@ allprojects {
         maven {
             url(new File(['node', '--print', "require.resolve('jsc-android/package.json', { paths: [require.resolve('react-native/package.json')] })"].execute(null, rootDir).text.trim(), '../dist'))
         }
+
         google()
         mavenCentral()
         maven { url 'https://www.jitpack.io' }
     }
 
-        configurations.all {
+    configurations.all {
         resolutionStrategy {
-            // हमने यहाँ सीधे '1.9.25' लिख दिया है ताकि वेरिएबल एरर न आए
+            // हमने यहाँ सीधे वर्जन नंबर लिखा है ताकि ग्रैडल को ढूँढने में आसानी हो
             force "org.jetbrains.kotlin:kotlin-stdlib:1.9.25"
             force "org.jetbrains.kotlin:kotlin-stdlib-jdk7:1.9.25"
             force "org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.9.25"
             force "org.jetbrains.kotlin:kotlin-stdlib-common:1.9.25"
             force "org.jetbrains.kotlin:kotlin-reflect:1.9.25"
         }
-        }
-    
+    }
+}
