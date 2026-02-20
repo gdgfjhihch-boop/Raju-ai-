@@ -1,50 +1,39 @@
 name: AI Player Build 🚀
 on: [push, workflow_dispatch]
-
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
-
       - name: Setup Java 17
         uses: actions/setup-java@v4
         with:
           distribution: 'zulu'
           java-version: '17'
-
       - name: Setup Node.js 20
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-
       - name: Install Dependencies
-        run: |
-          npm install
-          npm install @react-native-community/cli expo-asset --save-dev
-
+        run: npm install
       - name: Create node_modules symlink in android folder
         run: |
           mkdir -p android
           ln -s ../node_modules android/node_modules
-
       - name: Run Expo Prebuild
         run: npx expo prebuild --platform android
-
       - name: Bundle Assets
-        # यहाँ हमने entry-file को App.js कर दिया है
         run: |
           mkdir -p android/app/src/main/assets
           npx react-native bundle --platform android --dev false --entry-file App.js --bundle-output android/app/src/main/assets/index.android.bundle --assets-dest android/app/src/main/res
-
+          ls -R android/app/src/main/assets/
       - name: Build Android App (APK)
         run: |
           cd android
           chmod +x gradlew
           ./gradlew clean
           ./gradlew assembleDebug --no-daemon -Dorg.gradle.jvmargs=-Xmx4096m
-
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
