@@ -23,7 +23,6 @@ jobs:
         run: npm install
 
       - name: Create node_modules symlink in android folder
-        # यह स्टेप लाइन 12 वाले 'Path may not be null' एरर को जड़ से खत्म कर देगा
         run: |
           mkdir -p android
           ln -s ../node_modules android/node_modules
@@ -31,11 +30,17 @@ jobs:
       - name: Run Expo Prebuild
         run: npx expo prebuild --platform android
 
+      - name: Bundle Assets
+        # यह स्टेप आपके JavaScript कोड को APK के अंदर ही पैक कर देता है
+        # इससे "Unable to load script" वाला लाल एरर खत्म हो जाएगा
+        run: |
+          mkdir -p android/app/src/main/assets
+          npx react-native bundle --platform android --dev false --entry-file index.js --bundle-output android/app/src/main/assets/index.android.bundle --assets-dest android/app/src/main/res
+
       - name: Build Android App (APK)
         run: |
           cd android
           chmod +x gradlew
-          # पुराना कैश साफ़ करना और 4GB RAM के साथ बिल्ड करना
           ./gradlew clean
           ./gradlew assembleDebug --no-daemon -Dorg.gradle.jvmargs=-Xmx4096m
 
