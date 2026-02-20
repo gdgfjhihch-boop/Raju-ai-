@@ -22,8 +22,8 @@ jobs:
       - name: Install Dependencies
         run: |
           npm install
-          # गायब औजार को यहाँ इंस्टॉल कर रहे हैं
-          npm install @react-native-community/cli --save-dev
+          # यहाँ हम CLI और expo-asset दोनों को इंस्टॉल कर रहे हैं
+          npm install @react-native-community/cli expo-asset --save-dev
 
       - name: Create node_modules symlink in android folder
         run: |
@@ -34,7 +34,7 @@ jobs:
         run: npx expo prebuild --platform android
 
       - name: Bundle Assets
-        # अब यह स्टेप फेल नहीं होगा क्योंकि हमने ऊपर CLI इंस्टॉल कर लिया है
+        # अब यह स्टेप 'expo-asset' मिल जाने की वजह से सफल हो जाएगा
         run: |
           mkdir -p android/app/src/main/assets
           npx react-native bundle --platform android --dev false --entry-file index.js --bundle-output android/app/src/main/assets/index.android.bundle --assets-dest android/app/src/main/res
