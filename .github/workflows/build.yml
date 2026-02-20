@@ -22,7 +22,7 @@ jobs:
       - name: Install Dependencies
         run: |
           npm install
-          # हमने यहाँ core प्लगइन को पक्का कर दिया है
+          # गायब टूल्स को यहाँ इंस्टॉल किया गया है
           npm install @react-native-community/cli expo-asset react-native-worklets-core --save-dev
 
       - name: Create node_modules symlink in android folder
@@ -34,7 +34,7 @@ jobs:
         run: npx expo prebuild --platform android
 
       - name: Bundle Assets
-        # बेबल कैश को साफ़ करके बंडल बनाना शुरू करेंगे
+        # यह स्टेप आपके App.js को APK के अंदर पैक कर देगा
         run: |
           mkdir -p android/app/src/main/assets
           npx react-native bundle --platform android --dev false --entry-file App.js --bundle-output android/app/src/main/assets/index.android.bundle --assets-dest android/app/src/main/res --reset-cache
