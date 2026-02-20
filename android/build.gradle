@@ -9,16 +9,15 @@ buildscript {
     repositories {
         google()
         mavenCentral()
-        // यह नया तरीका पक्का करेगा कि ग्रैडल आपके फोल्डर को सही से पहचाने
-        maven { 
-            url new File(projectDir, "../node_modules/expo-modules-gradle-plugin/android") 
-        }
     }
     dependencies {
         classpath('com.android.tools.build:gradle')
         classpath('com.facebook.react:react-native-gradle-plugin')
         classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlinVersion")
-        // स्थानीय फोल्डर से प्लगइन उठाना
-        classpath "expo.modules:expo-modules-gradle-plugin:+"
+        
+        // यह नया तरीका प्लगइन को सीधा आपके node_modules से उठाएगा
+        // इससे Maven-metadata.xml वाला एरर जड़ से खत्म हो जाएगा
+        def expoModulesGradlePlugin = new File(["node", "--print", "require.resolve('expo-modules-gradle-plugin/package.json')"].execute(null, rootDir).text.trim(), "../android")
+        classpath files(expoModulesGradlePlugin.listFiles().findAll { it.name.endsWith(".jar") })
     }
 }
