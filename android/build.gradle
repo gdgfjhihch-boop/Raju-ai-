@@ -4,7 +4,7 @@ buildscript {
         minSdkVersion = 23
         compileSdkVersion = 35
         targetSdkVersion = 34
-        ndkVersion = "26.1.10909125" // यह लाइन Build #44 के एरर को ठीक करेगी
+        ndkVersion = "26.1.10909125" // Build #44 के एरर का फिक्स
         kotlinVersion = '1.9.25'
     }
     repositories {
@@ -16,10 +16,18 @@ buildscript {
         classpath('com.facebook.react:react-native-gradle-plugin')
         classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlinVersion")
         
-        // JAR फाइल को सीधा node_modules से उठाने का तरीका
+        // लोकल JAR फाइल को सीधा node_modules से उठाने का तरीका
         def expoModulesGradlePlugin = new File(["node", "--print", "require.resolve('expo-modules-gradle-plugin/package.json')"].execute(null, rootDir).text.trim(), "../android")
         if (expoModulesGradlePlugin.exists()) {
             classpath files(expoModulesGradlePlugin.listFiles().findAll { it.name.endsWith(".jar") })
         }
+    }
+}
+
+allprojects {
+    repositories {
+        mavenCentral()
+        google()
+        maven { url 'https://www.jitpack.io' }
     }
 }
