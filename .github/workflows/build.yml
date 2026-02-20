@@ -20,7 +20,10 @@ jobs:
           node-version: '20'
 
       - name: Install Dependencies
-        run: npm install
+        run: |
+          npm install
+          # गायब औजार को यहाँ इंस्टॉल कर रहे हैं
+          npm install @react-native-community/cli --save-dev
 
       - name: Create node_modules symlink in android folder
         run: |
@@ -31,8 +34,7 @@ jobs:
         run: npx expo prebuild --platform android
 
       - name: Bundle Assets
-        # यह स्टेप आपके JavaScript कोड को APK के अंदर ही पैक कर देता है
-        # इससे "Unable to load script" वाला लाल एरर खत्म हो जाएगा
+        # अब यह स्टेप फेल नहीं होगा क्योंकि हमने ऊपर CLI इंस्टॉल कर लिया है
         run: |
           mkdir -p android/app/src/main/assets
           npx react-native bundle --platform android --dev false --entry-file index.js --bundle-output android/app/src/main/assets/index.android.bundle --assets-dest android/app/src/main/res
