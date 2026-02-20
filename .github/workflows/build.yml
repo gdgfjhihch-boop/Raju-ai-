@@ -20,10 +20,10 @@ jobs:
           node-version: '20'
 
       - name: Install Dependencies
-        # Hum saare zaroori tools yahan install kar rahe hain taaki koi error na aaye
+        # यहाँ हमने 'react-native-worklets-core' को जोड़ दिया है
         run: |
           npm install
-          npm install @react-native-community/cli expo-asset --save-dev
+          npm install @react-native-community/cli expo-asset react-native-worklets-core --save-dev
 
       - name: Create node_modules symlink in android folder
         run: |
@@ -34,7 +34,7 @@ jobs:
         run: npx expo prebuild --platform android
 
       - name: Bundle Assets
-        # Is baar hum npx ka use karenge taaki agar CLI local nahi hai toh wo fetch ho jaye
+        # अब यह स्टेप उस प्लगइन को ढूँढ लेगा और सफल हो जाएगा
         run: |
           mkdir -p android/app/src/main/assets
           npx react-native bundle --platform android --dev false --entry-file App.js --bundle-output android/app/src/main/assets/index.android.bundle --assets-dest android/app/src/main/res
