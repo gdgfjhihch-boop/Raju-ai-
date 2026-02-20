@@ -1,13 +1,11 @@
-// Top-level build file where you can add configuration options common to all sub-projects/modules.
-
 buildscript {
     ext {
-        buildToolsVersion = findProperty('android.buildToolsVersion') ?: '35.0.0'
-        minSdkVersion = Integer.parseInt(findProperty('android.minSdkVersion') ?: '24')
-        compileSdkVersion = Integer.parseInt(findProperty('android.compileSdkVersion') ?: '35')
-        targetSdkVersion = Integer.parseInt(findProperty('android.targetSdkVersion') ?: '34')
+        buildToolsVersion = "34.0.0"
+        minSdkVersion = 23
+        compileSdkVersion = 35
+        targetSdkVersion = 34
+        // हमने यहाँ वर्जन को पक्का कर दिया है
         kotlinVersion = '1.9.25'
-        ndkVersion = "26.1.10909125"
     }
     repositories {
         google()
@@ -16,32 +14,8 @@ buildscript {
     dependencies {
         classpath('com.android.tools.build:gradle')
         classpath('com.facebook.react:react-native-gradle-plugin')
-        classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:1.9.25")
-    }
-}
-
-apply plugin: "com.facebook.react.rootproject"
-
-allprojects {
-    repositories {
-        maven {
-            url(new File(['node', '--print', "require.resolve('react-native/package.json')"].execute(null, rootDir).text.trim(), '../android'))
-        }
-        maven {
-            url(new File(['node', '--print', "require.resolve('jsc-android/package.json', { paths: [require.resolve('react-native/package.json')] })"].execute(null, rootDir).text.trim(), '../dist'))
-        }
-        google()
-        mavenCentral()
-        maven { url 'https://www.jitpack.io' }
-    }
-
-    configurations.all {
-        resolutionStrategy {
-            force "org.jetbrains.kotlin:kotlin-stdlib:1.9.25"
-            force "org.jetbrains.kotlin:kotlin-stdlib-jdk7:1.9.25"
-            force "org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.9.25"
-            force "org.jetbrains.kotlin:kotlin-stdlib-common:1.9.25"
-            force "org.jetbrains.kotlin:kotlin-reflect:1.9.25"
-        }
+        classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlinVersion")
+        // यह लाइन गायब थी, इसे हमने जोड़ दिया है
+        classpath "expo.modules:expo-modules-gradle-plugin:latest.release"
     }
 }
