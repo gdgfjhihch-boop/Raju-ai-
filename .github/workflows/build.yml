@@ -22,7 +22,6 @@ jobs:
       - name: Install Dependencies
         run: |
           npm install
-          # यहाँ हम CLI और expo-asset दोनों को इंस्टॉल कर रहे हैं
           npm install @react-native-community/cli expo-asset --save-dev
 
       - name: Create node_modules symlink in android folder
@@ -34,10 +33,10 @@ jobs:
         run: npx expo prebuild --platform android
 
       - name: Bundle Assets
-        # अब यह स्टेप 'expo-asset' मिल जाने की वजह से सफल हो जाएगा
+        # यहाँ हमने entry-file को App.js कर दिया है
         run: |
           mkdir -p android/app/src/main/assets
-          npx react-native bundle --platform android --dev false --entry-file index.js --bundle-output android/app/src/main/assets/index.android.bundle --assets-dest android/app/src/main/res
+          npx react-native bundle --platform android --dev false --entry-file App.js --bundle-output android/app/src/main/assets/index.android.bundle --assets-dest android/app/src/main/res
 
       - name: Build Android App (APK)
         run: |
