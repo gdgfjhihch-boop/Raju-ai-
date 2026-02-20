@@ -4,20 +4,21 @@ buildscript {
         minSdkVersion = 23
         compileSdkVersion = 35
         targetSdkVersion = 34
-        // यहाँ हमने वर्जन को सीधा लिख दिया है ताकि कोई एरर न आए
         kotlinVersion = '1.9.25'
     }
     repositories {
         google()
         mavenCentral()
-        // यह लाइन सबसे ज़रूरी है, यह आपके local node_modules में प्लगइन ढूँढेगी
-        maven { url new File(["node", "--print", "require.resolve('expo-modules-gradle-plugin/package.json')"].execute(null, rootDir).text.trim(), "../android") }
+        // यह नया तरीका पक्का करेगा कि ग्रैडल आपके फोल्डर को सही से पहचाने
+        maven { 
+            url new File(projectDir, "../node_modules/expo-modules-gradle-plugin/android") 
+        }
     }
     dependencies {
         classpath('com.android.tools.build:gradle')
         classpath('com.facebook.react:react-native-gradle-plugin')
         classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlinVersion")
-        // अब यह '+' स्थानीय फोल्डर से सबसे नया वर्जन खुद उठा लेगा
-        classpath "expo.modules:expo-modules-gradle-plugin:+" 
+        // स्थानीय फोल्डर से प्लगइन उठाना
+        classpath "expo.modules:expo-modules-gradle-plugin:+"
     }
 }
