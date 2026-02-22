@@ -10,13 +10,13 @@ buildscript {
     repositories {
         google()
         mavenCentral()
-        maven { url new File(rootDir, "../node_modules/expo-modules-gradle-plugin/android") }
     }
     dependencies {
         classpath('com.android.tools.build:gradle:8.1.1')
         classpath('com.facebook.react:react-native-gradle-plugin')
         classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlinVersion")
-        classpath("expo.modules:expo-modules-gradle-plugin:+")
+        // The expo-modules-gradle-plugin classpath line has been completely removed.
+        // Autolinking in settings.gradle will handle it automatically now.
     }
 }
 
