@@ -2,16 +2,16 @@ buildscript {
     ext {
         buildToolsVersion = "34.0.0"
         minSdkVersion = 23
-        compileSdkVersion = 34 // Stability ke liye 34 best hai
+        compileSdkVersion = 34
         targetSdkVersion = 34
         ndkVersion = "26.1.10909125"
-        kotlinVersion = '1.8.10' // Gradle 8.2.1 ke liye sahi version
+        kotlinVersion = '1.8.10'
     }
     repositories {
         google()
         mavenCentral()
-        // Yeh line expo plugin ko node_modules mein dhundhegi
-        maven { url "$rootDir/../node_modules/expo-modules-gradle-plugin/android" }
+        // Path to the expo-modules plugin in node_modules
+        maven { url new File(rootDir, "../node_modules/expo-modules-gradle-plugin/android") }
     }
     dependencies {
         classpath('com.android.tools.build:gradle:8.1.1')
@@ -23,8 +23,10 @@ buildscript {
 
 allprojects {
     repositories {
-        mavenCentral()
         google()
+        mavenCentral()
+        maven { url(new File(rootDir, "../node_modules/react-native/android")) }
+        maven { url(new File(rootDir, "../node_modules/jsc-android/dist")) }
         maven { url 'https://www.jitpack.io' }
     }
 }
