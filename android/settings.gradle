@@ -1,3 +1,4 @@
+// Update your android/settings.gradle file
 rootProject.name = 'Raju-ai-Agent'
 include ':app'
 includeBuild('../node_modules/@react-native/gradle-plugin')
