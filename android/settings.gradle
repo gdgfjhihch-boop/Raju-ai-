@@ -1,3 +1,3 @@
-rootProject.name = 'Raju-ai-Agent' // Space removed for better path resolution
+rootProject.name = 'Raju-ai-Agent'
 include ':app'
 includeBuild('../node_modules/@react-native/gradle-plugin')
