@@ -1,12 +1,23 @@
 rootProject.name = 'Raju-ai-Agent'
 
-// 1. Expo Autolinking Setup (Direct Path)
-apply from: new File(rootDir, "../node_modules/expo/scripts/autolinking.gradle")
-useExpoModules()
+// 1. Expo Autolinking Setup
+File expoScript = new File(rootDir, "../node_modules/expo/scripts/autolinking.gradle")
+if (expoScript.exists()) {
+    apply from: expoScript
+    useExpoModules()
+}
 
-// 2. React Native Autolinking Setup (Direct Path)
-apply from: new File(rootDir, "../node_modules/@react-native-community/cli-platform-android/native_modules.gradle")
-applyNativeModulesSettingsAuto()
+// 2. React Native Autolinking Setup (Checks both New and Old paths)
+File rnPluginNew = new File(rootDir, "../node_modules/@react-native/community-cli-plugin/native_modules.gradle")
+File rnPluginOld = new File(rootDir, "../node_modules/@react-native-community/cli-platform-android/native_modules.gradle")
+
+if (rnPluginNew.exists()) {
+    apply from: rnPluginNew
+    applyNativeModulesSettingsAuto()
+} else if (rnPluginOld.exists()) {
+    apply from: rnPluginOld
+    applyNativeModulesSettingsAuto()
+}
 
 include ':app'
 includeBuild(new File(rootDir, "../node_modules/@react-native/gradle-plugin"))
