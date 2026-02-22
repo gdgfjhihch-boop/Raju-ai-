@@ -2,25 +2,22 @@ buildscript {
     ext {
         buildToolsVersion = "34.0.0"
         minSdkVersion = 23
-        compileSdkVersion = 35
+        compileSdkVersion = 34 // Stability ke liye 34 best hai
         targetSdkVersion = 34
         ndkVersion = "26.1.10909125"
-        kotlinVersion = '1.9.25'
+        kotlinVersion = '1.8.10' // Gradle 8.2.1 ke liye sahi version
     }
     repositories {
         google()
         mavenCentral()
+        // Yeh line expo plugin ko node_modules mein dhundhegi
+        maven { url "$rootDir/../node_modules/expo-modules-gradle-plugin/android" }
     }
     dependencies {
-        classpath('com.android.tools.build:gradle')
+        classpath('com.android.tools.build:gradle:8.1.1')
         classpath('com.facebook.react:react-native-gradle-plugin')
         classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlinVersion")
-        
-        // लोकल JAR फाइल को सीधा node_modules से उठाने का तरीका
-        def expoModulesGradlePlugin = new File(["node", "--print", "require.resolve('expo-modules-gradle-plugin/package.json')"].execute(null, rootDir).text.trim(), "../android")
-        if (expoModulesGradlePlugin.exists()) {
-            classpath files(expoModulesGradlePlugin.listFiles().findAll { it.name.endsWith(".jar") })
-        }
+        classpath "expo.modules:expo-modules-gradle-plugin:+"
     }
 }
 
