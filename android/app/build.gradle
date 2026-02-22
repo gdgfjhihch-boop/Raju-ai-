@@ -2,7 +2,7 @@ apply plugin: "com.android.application"
 apply plugin: "com.facebook.react"
 
 android {
-    namespace "com.rajuai.agent" // Build #51 Fix
+    namespace "com.rajuai.agent"
     
     compileSdkVersion rootProject.ext.compileSdkVersion
     buildToolsVersion rootProject.ext.buildToolsVersion
