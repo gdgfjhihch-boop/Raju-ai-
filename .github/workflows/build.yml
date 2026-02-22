@@ -24,10 +24,6 @@ jobs:
           npm install
           npm install @react-native-community/cli expo-asset react-native-worklets-core --save-dev
 
-      - name: Run Expo Prebuild
-        # Added --clean to force a fresh, uncorrupted Android environment
-        run: npx expo prebuild --platform android --clean
-
       - name: Bundle Assets
         run: |
           mkdir -p android/app/src/main/assets
@@ -36,8 +32,6 @@ jobs:
       - name: Build Android App (APK)
         run: |
           cd android
-          # Hard-delete the build folder to ensure autolinking.json generates correctly
-          rm -rf build/
           chmod +x gradlew
           ./gradlew clean
           ./gradlew assembleDebug --no-daemon -Dorg.gradle.jvmargs=-Xmx4096m
