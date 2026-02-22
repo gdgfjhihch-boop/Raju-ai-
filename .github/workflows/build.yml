@@ -24,13 +24,9 @@ jobs:
           npm install
           npm install @react-native-community/cli expo-asset react-native-worklets-core --save-dev
 
-      - name: Create node_modules symlink in android folder
-        run: |
-          mkdir -p android
-          ln -s ../node_modules android/node_modules
-
       - name: Run Expo Prebuild
-        run: npx expo prebuild --platform android
+        # Added --clean to force a fresh, uncorrupted Android environment
+        run: npx expo prebuild --platform android --clean
 
       - name: Bundle Assets
         run: |
@@ -40,6 +36,8 @@ jobs:
       - name: Build Android App (APK)
         run: |
           cd android
+          # Hard-delete the build folder to ensure autolinking.json generates correctly
+          rm -rf build/
           chmod +x gradlew
           ./gradlew clean
           ./gradlew assembleDebug --no-daemon -Dorg.gradle.jvmargs=-Xmx4096m
