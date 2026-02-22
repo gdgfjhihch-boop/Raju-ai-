@@ -10,14 +10,17 @@ buildscript {
     repositories {
         google()
         mavenCentral()
-        // Path to the expo-modules plugin in node_modules
-        maven { url new File(rootDir, "../node_modules/expo-modules-gradle-plugin/android") }
     }
     dependencies {
         classpath('com.android.tools.build:gradle:8.1.1')
         classpath('com.facebook.react:react-native-gradle-plugin')
         classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlinVersion")
-        classpath "expo.modules:expo-modules-gradle-plugin:+"
+        
+        // This line bypasses the Maven search and loads the plugin directly
+        File expoPluginDir = new File(rootDir, "../node_modules/expo-modules-gradle-plugin/android")
+        if (expoPluginDir.exists()) {
+            classpath fileTree(dir: expoPluginDir, include: ['*.jar'])
+        }
     }
 }
 
