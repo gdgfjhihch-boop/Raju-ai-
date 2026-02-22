@@ -3,7 +3,6 @@ module.exports = function (api) {
   return {
     presets: ['babel-preset-expo'],
     plugins: [
-      // '-core' लगाना बहुत जरूरी है
       'react-native-worklets-core/plugin',
     ],
   };
