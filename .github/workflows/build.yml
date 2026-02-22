@@ -33,6 +33,7 @@ jobs:
         run: npx expo prebuild --platform android
 
       - name: Bundle Assets
+        # Isse aapka App.js APK ke andar pack ho jayega
         run: |
           mkdir -p android/app/src/main/assets
           npx react-native bundle --platform android --dev false --entry-file App.js --bundle-output android/app/src/main/assets/index.android.bundle --assets-dest android/app/src/main/res --reset-cache
