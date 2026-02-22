@@ -4,7 +4,7 @@ buildscript {
         minSdkVersion = 23
         compileSdkVersion = 35
         targetSdkVersion = 34
-        ndkVersion = "26.1.10909125" // Build #44 के एरर का फिक्स
+        ndkVersion = "26.1.10909125"
         kotlinVersion = '1.9.25'
     }
     repositories {
