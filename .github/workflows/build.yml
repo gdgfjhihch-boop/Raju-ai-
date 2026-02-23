@@ -22,22 +22,20 @@ jobs:
       - name: Install Dependencies
         run: |
           npm install
-          npm install @react-native-community/cli@latest babel-preset-expo@latest --save-dev
-          npx expo install expo-asset
-          npx expo install --fix
+          npm install babel-preset-expo@latest --save-dev
 
-      - name: Configure Babel and Bundle Assets
+      - name: Expo Prebuild (The Magic Step)
         run: |
           echo "module.exports = function(api) { api.cache(true); return { presets: ['babel-preset-expo'] }; };" > babel.config.js
-          mkdir -p android/app/src/main/assets
-          npx react-native bundle --platform android --dev false --entry-file App.js --bundle-output android/app/src/main/assets/index.android.bundle --assets-dest android/app/src/main/res --reset-cache
+          if [ ! -f app.json ]; then
+            echo '{ "expo": { "name": "RajuAI", "slug": "raju-ai", "android": { "package": "com.raju.ai" } } }' > app.json
+          fi
+          npx expo prebuild --platform android --clean
 
       - name: Build Android App (APK)
         run: |
           cd android
-          rm -rf build/
           chmod +x gradlew
-          ./gradlew clean
           ./gradlew assembleDebug --no-daemon -Dorg.gradle.jvmargs=-Xmx4096m
 
       - name: Upload APK Artifact
