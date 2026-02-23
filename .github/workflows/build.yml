@@ -20,9 +20,11 @@ jobs:
           node-version: '20'
 
       - name: Install Dependencies
+        # यहाँ हमने Android CLI टूल और npx expo install --fix जोड़ दिया है
         run: |
           npm install
-          npm install babel-preset-expo@latest --save-dev
+          npm install @react-native-community/cli-platform-android@latest @react-native-community/cli@latest babel-preset-expo@latest --save-dev
+          npx expo install --fix
 
       - name: Expo Prebuild (The Magic Step)
         run: |
