@@ -20,18 +20,15 @@ jobs:
           node-version: '20'
 
       - name: Install Dependencies
-        # यहाँ हमने Android CLI टूल और npx expo install --fix जोड़ दिया है
+        # हमने सारे एक्स्ट्रा CLI पैकेजेस हटा दिए हैं। Expo खुद सब सेट करेगा।
         run: |
           npm install
-          npm install @react-native-community/cli-platform-android@latest @react-native-community/cli@latest babel-preset-expo@latest --save-dev
           npx expo install --fix
 
-      - name: Expo Prebuild (The Magic Step)
+      - name: Expo Prebuild
         run: |
           echo "module.exports = function(api) { api.cache(true); return { presets: ['babel-preset-expo'] }; };" > babel.config.js
-          if [ ! -f app.json ]; then
-            echo '{ "expo": { "name": "RajuAI", "slug": "raju-ai", "android": { "package": "com.raju.ai" } } }' > app.json
-          fi
+          echo '{ "expo": { "name": "RajuAI", "slug": "raju-ai", "android": { "package": "com.raju.ai" } } }' > app.json
           npx expo prebuild --platform android --clean
 
       - name: Build Android App (APK)
