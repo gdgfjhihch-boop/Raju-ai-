@@ -22,7 +22,7 @@ jobs:
       - name: Install Dependencies
         run: |
           npm install
-          npm install @react-native-community/cli@latest expo@~50.0.14 expo-modules-core@~1.11.12 expo-asset@~50.0.1 babel-preset-expo@~10.0.1 react-native-worklets-core --save-dev
+          npm install @react-native-community/cli@latest expo@^50.0.0 expo-modules-core@^1.11.0 expo-asset@^50.0.0 babel-preset-expo@^10.0.0 react-native-worklets-core --save-dev
 
       - name: Bundle Assets
         run: |
