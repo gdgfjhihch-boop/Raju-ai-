@@ -22,13 +22,11 @@ jobs:
       - name: Install Dependencies
         run: |
           npm install
-          npm install @react-native-community/cli@latest @react-native/babel-preset@latest react-native-worklets-core react-native-reanimated --save-dev
-          npm install expo@~50.0.14
-          npx expo install --fix
+          npm install babel-preset-expo@latest --save-dev
 
       - name: Configure Babel and Bundle Assets
         run: |
-          echo "module.exports = { presets: ['module:@react-native/babel-preset'], plugins: ['react-native-worklets-core/plugin', 'react-native-reanimated/plugin'] };" > babel.config.js
+          echo "module.exports = function(api) { api.cache(true); return { presets: ['babel-preset-expo'] }; };" > babel.config.js
           mkdir -p android/app/src/main/assets
           npx react-native bundle --platform android --dev false --entry-file App.js --bundle-output android/app/src/main/assets/index.android.bundle --assets-dest android/app/src/main/res --reset-cache
 
@@ -43,6 +41,6 @@ jobs:
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: universal-ai-player-apk
+          name: raju-ai-apk
           path: android/app/build/outputs/apk/debug/app-debug.apk
           
