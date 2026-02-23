@@ -19,10 +19,11 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Install Dependencies
-        # हमने सारे एक्स्ट्रा CLI पैकेजेस हटा दिए हैं। Expo खुद सब सेट करेगा।
+      - name: Install Dependencies with Yarn
         run: |
-          npm install
+          npm install -g yarn
+          yarn install
+          yarn add babel-preset-expo@latest --dev
           npx expo install --fix
 
       - name: Expo Prebuild
