@@ -24,8 +24,9 @@ jobs:
           npm install
           npm install @react-native-community/cli@latest expo@~50.0.14 expo-modules-core@~1.11.12 expo-asset@~9.0.2 babel-preset-expo@~10.0.1 react-native-worklets-core --save-dev
 
-      - name: Bundle Assets
+      - name: Configure Babel and Bundle Assets
         run: |
+          echo "module.exports = function(api) { api.cache(true); return { presets: ['babel-preset-expo'] }; };" > babel.config.js
           mkdir -p android/app/src/main/assets
           npx react-native bundle --platform android --dev false --entry-file App.js --bundle-output android/app/src/main/assets/index.android.bundle --assets-dest android/app/src/main/res --reset-cache
 
