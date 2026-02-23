@@ -22,7 +22,9 @@ jobs:
       - name: Install Dependencies
         run: |
           npm install
-          npm install @react-native-community/cli@latest expo@~50.0.14 expo-modules-core@~1.11.12 expo-asset@~9.0.2 @react-native/babel-preset@latest react-native-worklets-core --save-dev
+          npm install @react-native-community/cli@latest @react-native/babel-preset@latest react-native-worklets-core --save-dev
+          npm install expo@~50.0.14
+          npx expo install --fix
 
       - name: Configure Babel and Bundle Assets
         run: |
