@@ -2,10 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { StyleSheet, Text, View, TextInput, TouchableOpacity, ScrollView, ActivityIndicator, Alert } from 'react-native';
 import * as FileSystem from 'expo-file-system';
 import { LlamaContext } from 'llama.rn';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, SafeAreaProvider } from 'react-native-safe-area-context';
 
 export default function App() {
-  // Using a very small, fast model (SmolLM2 135M) for guaranteed performance
   const MODEL_URL = 'https://huggingface.co/HuggingFaceFW/SmolLM2-135M-Instruct-GGUF/resolve/main/smollm2-135m-instruct-q4_k_m.gguf';
   const MODEL_PATH = FileSystem.documentDirectory + 'model.gguf';
 
@@ -56,39 +55,41 @@ export default function App() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <Text style={styles.header}>Raju AI (Offline)</Text>
-      
-      {!isModelReady ? (
-        <View style={styles.center}>
-          <Text style={styles.status}>Setup Required</Text>
-          {loading ? (
-            <View>
-              <ActivityIndicator size="large" color="#4CAF50" />
-              <Text>{(downloadProgress * 100).toFixed(0)}% Downloaded</Text>
-            </View>
-          ) : (
-            <TouchableOpacity style={styles.btn} onPress={initModel}>
-              <Text style={styles.btnText}>Download & Start AI</Text>
-            </TouchableOpacity>
-          )}
-        </View>
-      ) : (
-        <View style={{flex: 1}}>
-          <ScrollView style={styles.chat}>
-            {messages.map((m, i) => (
-              <View key={i} style={[styles.msg, m.role === 'user' ? styles.user : styles.ai]}>
-                <Text style={styles.msgText}>{m.text}</Text>
+    <SafeAreaProvider>
+      <SafeAreaView style={styles.container}>
+        <Text style={styles.header}>Raju AI (Offline)</Text>
+        
+        {!isModelReady ? (
+          <View style={styles.center}>
+            <Text style={styles.status}>Setup Required</Text>
+            {loading ? (
+              <View>
+                <ActivityIndicator size="large" color="#4CAF50" />
+                <Text>{(downloadProgress * 100).toFixed(0)}% Downloaded</Text>
               </View>
-            ))}
-          </ScrollView>
-          <View style={styles.inputArea}>
-            <TextInput style={styles.input} value={input} onChangeText={setInput} placeholder="Ask Raju AI..." />
-            <TouchableOpacity style={styles.sendBtn} onPress={send}><Text style={styles.btnText}>Send</Text></TouchableOpacity>
+            ) : (
+              <TouchableOpacity style={styles.btn} onPress={initModel}>
+                <Text style={styles.btnText}>Download & Start AI</Text>
+              </TouchableOpacity>
+            )}
           </View>
-        </View>
-      )}
-    </SafeAreaView>
+        ) : (
+          <View style={{flex: 1}}>
+            <ScrollView style={styles.chat}>
+              {messages.map((m, i) => (
+                <View key={i} style={[styles.msg, m.role === 'user' ? styles.user : styles.ai]}>
+                  <Text style={styles.msgText}>{m.text}</Text>
+                </View>
+              ))}
+            </ScrollView>
+            <View style={styles.inputArea}>
+              <TextInput style={styles.input} value={input} onChangeText={setInput} placeholder="Ask Raju AI..." />
+              <TouchableOpacity style={styles.sendBtn} onPress={send}><Text style={styles.btnText}>Send</Text></TouchableOpacity>
+            </View>
+          </View>
+        )}
+      </SafeAreaView>
+    </SafeAreaProvider>
   );
 }
 
@@ -106,3 +107,4 @@ const styles = StyleSheet.create({
   inputArea: { flexDirection: 'row', padding: 10, gap: 10, backgroundColor: '#fff' },
   input: { flex: 1, borderWidth: 1, borderColor: '#ddd', borderRadius: 5, padding: 10 },
 });
+    
