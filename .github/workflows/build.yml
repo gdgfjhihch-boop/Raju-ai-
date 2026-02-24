@@ -26,15 +26,11 @@ jobs:
 
       - name: Fresh Expo Prebuild
         run: |
-          # पुराने कचरे को पूरी तरह साफ करना
           rm -rf android
           echo "module.exports = function(api) { api.cache(true); return { presets: ['babel-preset-expo'] }; };" > babel.config.js
-          
-          # एक प्रॉपर app.json बनाना
           echo '{ "expo": { "name": "RajuAI", "slug": "raju-ai", "version": "1.0.0", "android": { "package": "com.raju.ai", "adaptiveIcon": { "backgroundColor": "#ffffff" } } } }' > app.json
-          
-          # बिल्कुल नया Android फोल्डर जनरेट करना
-          npx expo prebuild --platform android --no-install
+          # यहाँ से मैंने --no-install हटा दिया है
+          npx expo prebuild --platform android --clean
 
       - name: Build Android App (APK)
         run: |
