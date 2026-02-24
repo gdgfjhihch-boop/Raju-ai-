@@ -21,7 +21,8 @@ jobs:
 
       - name: Install Dependencies
         run: |
-          npm install
+          npm cache clean --force
+          npm install --legacy-peer-deps
           npx expo install --fix
 
       - name: Fresh Expo Prebuild
@@ -29,14 +30,20 @@ jobs:
           rm -rf android
           echo "module.exports = function(api) { api.cache(true); return { presets: ['babel-preset-expo'] }; };" > babel.config.js
           echo '{ "expo": { "name": "RajuAI", "slug": "raju-ai", "version": "1.0.0", "android": { "package": "com.raju.ai", "adaptiveIcon": { "backgroundColor": "#ffffff" } } } }' > app.json
-          # यहाँ से मैंने --no-install हटा दिया है
           npx expo prebuild --platform android --clean
+
+      - name: Fix Gradle Paths
+        run: |
+          echo "reactNativeDir=../node_modules/react-native" >> android/gradle.properties
+          echo "reactNativeNodeModulesDir=../node_modules" >> android/gradle.properties
+          echo "org.gradle.jvmargs=-Xmx4096m" >> android/gradle.properties
 
       - name: Build Android App (APK)
         run: |
           cd android
           chmod +x gradlew
-          ./gradlew assembleDebug --no-daemon -Dorg.gradle.jvmargs=-Xmx4096m
+          NODE_BIN=$(which node)
+          ./gradlew assembleDebug --no-daemon -PnodeExecutableAndArgs="$NODE_BIN"
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
