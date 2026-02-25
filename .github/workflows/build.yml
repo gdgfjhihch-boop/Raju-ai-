@@ -1,4 +1,4 @@
-name: AI Player Build 🚀
+name: AI Player Build
 on: [push, workflow_dispatch]
 
 jobs:
@@ -21,27 +21,21 @@ jobs:
 
       - name: Install Dependencies
         run: |
-          rm -rf node_modules package-lock.json android
           npm install
+          npm install @expo/cli @react-native-community/cli-platform-android --save-dev
           npx expo install --fix
 
       - name: Fresh Expo Prebuild
         run: |
+          rm -rf android
           echo "module.exports = function(api) { api.cache(true); return { presets: ['babel-preset-expo'] }; };" > babel.config.js
-          echo '{ "expo": { "name": "RajuAI", "slug": "raju-ai", "version": "1.0.0", "android": { "package": "com.raju.ai", "adaptiveIcon": { "backgroundColor": "#ffffff" } } } }' > app.json
+          echo '{ "expo": { "name": "RajuAI", "slug": "raju-ai", "version": "1.0.0", "android": { "package": "com.raju.ai" } } }' > app.json
           npx expo prebuild --platform android --clean
 
-      - name: Fix Node Executable Path for Gradle
-        run: |
-          NODE_BIN=$(which node)
-          find android -name "*.gradle" -type f -exec sed -i "s|\\[\"node\",|\\[\"${NODE_BIN}\",|g" {} +
-          find android -name "*.gradle" -type f -exec sed -i "s|'node',|'${NODE_BIN}',|g" {} +
-          echo "REACT_NATIVE_DIR=${GITHUB_WORKSPACE}/node_modules/react-native" >> android/gradle.properties
-          echo "reactNativeDir=${GITHUB_WORKSPACE}/node_modules/react-native" >> android/gradle.properties
-
-      - name: Build Android App (APK)
+      - name: Configure Gradle and Build APK
         run: |
           cd android
+          echo "newArchEnabled=false" >> gradle.properties
           chmod +x gradlew
           ./gradlew assembleDebug --no-daemon -Dorg.gradle.jvmargs=-Xmx4096m
 
