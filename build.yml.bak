@@ -1,25 +1,46 @@
-name: AI Player Build 🚀
+name: AI Player Build
 on: [push, workflow_dispatch]
+
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-java@v4
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Java 17
+        uses: actions/setup-java@v4
         with:
           distribution: 'zulu'
           java-version: '17'
-      - uses: actions/setup-node@v4
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
         with:
           node-version: '20'
-      - run: npm install
-      - run: npx expo prebuild --platform android
-      - name: Build Android App
+
+      - name: Install Dependencies
+        run: |
+          npm pkg set main="expo/AppEntry.js"
+          npm install
+          npm install @react-native-community/cli-platform-android @expo/cli --save-dev
+          npx expo install --fix
+
+      - name: Fresh Expo Prebuild
+        run: |
+          rm -rf android
+          echo "module.exports = function(api) { api.cache(true); return { presets: ['babel-preset-expo'] }; };" > babel.config.js
+          echo '{ "expo": { "name": "RajuAI", "slug": "raju-ai", "version": "1.0.0", "android": { "package": "com.raju.ai" } } }' > app.json
+          npx expo prebuild --platform android --clean
+
+      - name: Build Android App (APK)
         run: |
           cd android
           chmod +x gradlew
-          ./gradlew assembleDebug --no-daemon -Dorg.gradle.jvmargs=-Xmx4g
-      - uses: actions/upload-artifact@v4
+          ./gradlew assembleDebug --no-daemon -Dorg.gradle.jvmargs=-Xmx4096m
+
+      - name: Upload APK Artifact
+        uses: actions/upload-artifact@v4
         with:
-          name: universal-ai-player-apk
+          name: raju-ai-apk
           path: android/app/build/outputs/apk/debug/app-debug.apk
