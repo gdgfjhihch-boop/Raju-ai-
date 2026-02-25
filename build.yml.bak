@@ -19,24 +19,22 @@ jobs:
         with:
           node-version: '20'
 
+      - name: Prepare Environment
+        run: sudo ln -sf $(which node) /usr/bin/node
+
       - name: Install Dependencies
         run: |
+          rm -rf node_modules android
+          npm pkg set main="expo/AppEntry.js"
           npm install
+          npm install expo-modules-core@latest @expo/cli@latest @react-native-community/cli-platform-android@latest --save
           npx expo install --fix
 
       - name: Fresh Expo Prebuild
         run: |
-          rm -rf android
           echo "module.exports = function(api) { api.cache(true); return { presets: ['babel-preset-expo'] }; };" > babel.config.js
           echo '{ "expo": { "name": "RajuAI", "slug": "raju-ai", "version": "1.0.0", "android": { "package": "com.raju.ai" } } }' > app.json
           npx expo prebuild --platform android --clean
-
-      - name: Inject Absolute Paths
-        run: |
-          NODE_PATH=$(which node)
-          echo "REACT_NATIVE_NODE_EXECUTABLE=$NODE_PATH" >> android/gradle.properties
-          echo "reactNativeDir=${GITHUB_WORKSPACE}/node_modules/react-native" >> android/gradle.properties
-          echo "reactNativeNodeModulesDir=${GITHUB_WORKSPACE}/node_modules" >> android/gradle.properties
 
       - name: Build Android App (APK)
         run: |
