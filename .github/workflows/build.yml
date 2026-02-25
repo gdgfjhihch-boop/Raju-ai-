@@ -21,8 +21,8 @@ jobs:
 
       - name: Install Dependencies
         run: |
+          npm cache clean --force
           npm install
-          npm install @expo/cli @react-native-community/cli-platform-android --save-dev
           npx expo install --fix
 
       - name: Fresh Expo Prebuild
@@ -32,10 +32,18 @@ jobs:
           echo '{ "expo": { "name": "RajuAI", "slug": "raju-ai", "version": "1.0.0", "android": { "package": "com.raju.ai" } } }' > app.json
           npx expo prebuild --platform android --clean
 
-      - name: Configure Gradle and Build APK
+      - name: Force Node Paths in Gradle
         run: |
+          NODE_BIN=$(which node)
+          sed -i "s|\"node\"|\"$NODE_BIN\"|g" android/app/build.gradle
+          sed -i "s|'node'|'$NODE_BIN'|g" android/app/build.gradle
+          sed -i "s|\"node\"|\"$NODE_BIN\"|g" android/settings.gradle || true
+          sed -i "s|'node'|'$NODE_BIN'|g" android/settings.gradle || true
+
+      - name: Build Android App (APK)
+        run: |
+          export NODE_PATH=${GITHUB_WORKSPACE}/node_modules
           cd android
-          echo "newArchEnabled=false" >> gradle.properties
           chmod +x gradlew
           ./gradlew assembleDebug --no-daemon -Dorg.gradle.jvmargs=-Xmx4096m
 
