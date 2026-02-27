@@ -18,36 +18,24 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20'
+          cache: 'npm'
 
       - name: Install Dependencies
         run: |
-          npm cache clean --force
           npm install
           npx expo install --fix
 
-      - name: Fresh Expo Prebuild
-        run: |
-          rm -rf android
-          echo "module.exports = function(api) { api.cache(true); return { presets: ['babel-preset-expo'] }; };" > babel.config.js
-          echo '{ "expo": { "name": "RajuAI", "slug": "raju-ai", "version": "1.0.0", "android": { "package": "com.raju.ai" } } }' > app.json
-          npx expo prebuild --platform android --clean
-
-      - name: Force Node Paths in Gradle
-        run: |
-          NODE_BIN=$(which node)
-          sed -i "s|\"node\"|\"$NODE_BIN\"|g" android/app/build.gradle
-          sed -i "s|'node'|'$NODE_BIN'|g" android/app/build.gradle
-          sed -i "s|\"node\"|\"$NODE_BIN\"|g" android/settings.gradle || true
-          sed -i "s|'node'|'$NODE_BIN'|g" android/settings.gradle || true
+      - name: Prebuild Android
+        # Ye command aapki repo ki asli config use karegi
+        run: npx expo prebuild --platform android --clean --no-install
 
       - name: Build Android App (APK)
+        working-directory: android
         run: |
-          export NODE_PATH=${GITHUB_WORKSPACE}/node_modules
-          cd android
           chmod +x gradlew
           ./gradlew assembleDebug --no-daemon -Dorg.gradle.jvmargs=-Xmx4096m
 
-      - name: Upload APK Artifact
+      - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: raju-ai-apk
