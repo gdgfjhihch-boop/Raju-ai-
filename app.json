@@ -3,11 +3,35 @@
     "name": "Raju AI Player",
     "slug": "raju-ai",
     "version": "1.0.0",
-    "plugins": [
-      "expo-file-system"
-    ],
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": true,
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.raju.aiplayer"
+    },
     "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#ffffff"
+      },
       "package": "com.raju.aiplayer"
-    }
+    },
+    "plugins": [
+      "expo-file-system",
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "compileSdkVersion": 34,
+            "targetSdkVersion": 34,
+            "minSdkVersion": 23,
+            "buildToolsVersion": "34.0.0",
+            "ndkVersion": "26.1.10909125"
+          }
+        }
+      ]
+    ]
   }
 }
