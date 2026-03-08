@@ -43,7 +43,7 @@
     "react-native-gesture-handler": "~2.20.2",
     "react-native-reanimated": "~3.16.6",
     "@google/generative-ai": "^0.21.0",
-    "llama.rn": "^0.10.3",
+    "llama.rn": "latest",
     "react-native-mmkv": "^3.2.0",
     "@shopify/flash-list": "^1.7.2",
     "react-native-svg": "15.8.0",
