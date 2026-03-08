@@ -1,0 +1,65 @@
+name: Raju AI Android Build
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+  workflow_dispatch:
+
+jobs:
+  build-android:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Expo and EAS CLI
+        run: npm install -g expo-cli eas-cli
+
+      - name: Install dependencies
+        run: |
+          rm -f package-lock.json
+          npm install --legacy-peer-deps
+
+      - name: Expo Prebuild
+        run: npx expo prebuild --clean --platform android
+        env:
+          EXPO_NO_TELEMETRY: 1
+
+      - name: Apply Double Shield
+        run: |
+          node fix-build.js
+          node patch-llama.js
+
+      - name: Build Android APK
+        run: |
+          cd android
+          ./gradlew assembleRelease --no-daemon --stacktrace -Dorg.gradle.jvmargs="-Xmx6g -XX:MaxMetaspaceSize=1024m"
+        env:
+          ANDROID_HOME: ${{ env.ANDROID_SDK_ROOT }}
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: raju-ai-release.apk
+          path: android/app/build/outputs/apk/release/*.apk
+          retention-days: 30
+          
