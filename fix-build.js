@@ -1,21 +1,24 @@
 const fs = require('fs');
 const path = require('path');
 
-console.log("\n[RAJU AI] — Running Bulletproof Gradle Shield v7.0...");
+console.log("\n[RAJU AI] — Running Bulletproof Gradle Shield v8.0 (No Hermes)...");
 
 const ROOT = process.cwd();
 const APP_GRADLE = path.join(ROOT, 'android', 'app', 'build.gradle');
 const GRADLE_PROPS = path.join(ROOT, 'android', 'gradle.properties');
 
-// 1. Enable New Architecture in gradle.properties
+// 1. Disable Hermes and Enable New Architecture in gradle.properties
 if (fs.existsSync(GRADLE_PROPS)) {
   let props = fs.readFileSync(GRADLE_PROPS, 'utf8');
   props = props.replace(/newArchEnabled=false/g, "newArchEnabled=true");
-  if (!props.includes("GRADLE_SHIELD_V7")) {
-    props += `\n# GRADLE_SHIELD_V7\nnewArchEnabled=true\nhermesEnabled=true\nandroid.ndkVersion=26.1.10909125\n`;
+  // RAJU AI FIX: Disable Hermes to avoid 'hermesc' compiler errors in CI
+  props = props.replace(/hermesEnabled=true/g, "hermesEnabled=false");
+  
+  if (!props.includes("GRADLE_SHIELD_V8")) {
+    props += `\n# GRADLE_SHIELD_V8\nnewArchEnabled=true\nhermesEnabled=false\nandroid.ndkVersion=26.1.10909125\n`;
     fs.writeFileSync(GRADLE_PROPS, props);
   }
-  console.log("✓ gradle.properties (NewArch: true) - OK");
+  console.log("✓ gradle.properties (NewArch: true, Hermes: false) - OK");
 }
 
 // 2. Safely replace dynamic paths line-by-line
@@ -34,10 +37,8 @@ if (fs.existsSync(APP_GRADLE)) {
         lines[i] = '    codegenDir = file("../../node_modules/@react-native/codegen")';
     } else if (trimmed.startsWith('cliFile = ')) {
         lines[i] = '    cliFile = file("../../node_modules/@expo/cli/build/bin/cli")';
-    } else if (trimmed.startsWith('hermesCommand = ')) {
-        // RAJU AI FIX: Explicitly point to Linux hermes compiler for GitHub Actions
-        lines[i] = '    hermesCommand = "../../node_modules/react-native/sdks/hermesc/linux64-bin/hermesc"';
-    }
+    } 
+    // We don't need hermesCommand anymore since Hermes is disabled
   }
   gradle = lines.join('\n');
 
@@ -51,7 +52,7 @@ if (fs.existsSync(APP_GRADLE)) {
   gradle = gradle.replace(/minSdkVersion\s+\d+/, "minSdkVersion 26").replace(/minSdk\s+\d+/, "minSdk 26");
 
   fs.writeFileSync(APP_GRADLE, gradle);
-  console.log("✓ android/app/build.gradle safely patched (Hermes Linux fixed)");
+  console.log("✓ android/app/build.gradle safely patched");
 }
 
-console.log("[RAJU AI] — Bulletproof Shield V7 Complete!\n");
+console.log("[RAJU AI] — Bulletproof Shield V8 Complete!\n");
