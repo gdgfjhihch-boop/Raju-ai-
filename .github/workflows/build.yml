@@ -1,4 +1,4 @@
-Name: RAJU AI â€” Android Build
+name: RAJU AI - Android Build
 
 on:
   push:
@@ -16,8 +16,8 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      # â”€â”€ GRADLE SHIELD: Force correct versions before anything else â”€â”€â”€â”€â”€â”€
-      - name: ðŸ›¡ï¸ Patch package.json versions
+      # --- GRADLE SHIELD: Force correct versions before anything else ---
+      - name: Patch package.json versions
         run: |
           node -e "
             const fs = require('fs');
@@ -25,10 +25,10 @@ jobs:
             pkg.dependencies['react'] = '18.3.1';
             pkg.dependencies['react-native'] = '0.76.9';
             pkg.overrides = { react: '18.3.1', 'react-native': '0.76.9' };
-            pkg.main = pkg.main === 'expo-router/entry' ? 'index.js' : pkg.main;
+            pkg.main = pkg.main === 'expo-router/entry' ? 'node_modules/expo/AppEntry.js' : pkg.main;
             fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2));
-            console.log('âœ“ Patched react:', pkg.dependencies['react']);
-            console.log('âœ“ Patched react-native:', pkg.dependencies['react-native']);
+            console.log('Patched react:', pkg.dependencies['react']);
+            console.log('Patched react-native:', pkg.dependencies['react-native']);
           "
 
       - name: Setup Node.js
@@ -79,3 +79,4 @@ jobs:
           name: raju-ai-release.apk
           path: android/app/build/outputs/apk/release/*.apk
           retention-days: 30
+          
