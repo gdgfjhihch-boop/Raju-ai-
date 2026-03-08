@@ -1,53 +1,81 @@
-name: AI Player Build
-on: [push, workflow_dispatch]
+Name: RAJU AI â€” Android Build
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+  workflow_dispatch:
 
 jobs:
-  build:
+  build-android:
     runs-on: ubuntu-latest
+    timeout-minutes: 60
+
     steps:
-      - name: Checkout Repository
+      - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Java 17
+      # â”€â”€ GRADLE SHIELD: Force correct versions before anything else â”€â”€â”€â”€â”€â”€
+      - name: ðŸ›¡ï¸ Patch package.json versions
+        run: |
+          node -e "
+            const fs = require('fs');
+            const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
+            pkg.dependencies['react'] = '18.3.1';
+            pkg.dependencies['react-native'] = '0.76.9';
+            pkg.overrides = { react: '18.3.1', 'react-native': '0.76.9' };
+            pkg.main = pkg.main === 'expo-router/entry' ? 'index.js' : pkg.main;
+            fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2));
+            console.log('âœ“ Patched react:', pkg.dependencies['react']);
+            console.log('âœ“ Patched react-native:', pkg.dependencies['react-native']);
+          "
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Setup Java
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Setup Node.js 20
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
 
-      - name: Install Dependencies
-        run: |
-          npm install
-          npx expo install --fix
+      - name: Install Expo CLI
+        run: npm install -g expo-cli eas-cli
 
-      - name: Fresh Expo Prebuild
-        run: |
-          rm -rf android
-          echo '{ "expo": { "name": "RajuAI", "slug": "raju-ai", "version": "1.0.0", "android": { "package": "com.raju.ai" } } }' > app.json
-          echo 'module.exports = function(api) { api.cache(true); return { presets: ["babel-preset-expo"] }; };' > babel.config.js
-          npx expo prebuild --platform android --clean
+      - name: Delete stale lockfile
+        run: rm -f package-lock.json
 
-      - name: Fix Autolinking Path
-        # This step manually injects the correct path to fix the 'path=' error
-        run: |
-          NODE_MODULES_PATH=$(pwd)/node_modules
-          echo "nodeModulesPaths=$NODE_MODULES_PATH" >> android/gradle.properties
-          echo "reactNativeDir=$NODE_MODULES_PATH/react-native" >> android/gradle.properties
-          sed -i "s|import.*native-gradle-plugin.*|apply from: \"$NODE_MODULES_PATH/react-native/package.json\"|g" android/app/build.gradle || true
+      - name: Install dependencies
+        run: npm install --legacy-peer-deps
 
-      - name: Build Android App (APK)
+      - name: Run Gradle Shield
+        run: node fix-build.js
+
+      - name: Expo Prebuild
+        run: npx expo prebuild --clean --platform android
+        env:
+          EXPO_NO_TELEMETRY: 1
+
+      - name: Build Android APK
         run: |
           cd android
-          chmod +x gradlew
-          ./gradlew assembleDebug --no-daemon -Dorg.gradle.jvmargs=-Xmx4096m
+          ./gradlew assembleRelease \
+            --no-daemon \
+            --stacktrace \
+            -Dorg.gradle.jvmargs="-Xmx4096m -XX:MaxMetaspaceSize=1024m"
+        env:
+          ANDROID_HOME: ${{ env.ANDROID_SDK_ROOT }}
 
-      - name: Upload APK Artifact
+      - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: raju-ai-apk
-          path: android/app/build/outputs/apk/debug/app-debug.apk
-          
+          name: raju-ai-release.apk
+          path: android/app/build/outputs/apk/release/*.apk
+          retention-days: 30
