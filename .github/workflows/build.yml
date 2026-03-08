@@ -1,4 +1,4 @@
-name: RAJU AI - Android Build
+name: Raju AI Android Build
 
 on:
   push:
@@ -13,10 +13,9 @@ jobs:
     timeout-minutes: 60
 
     steps:
-      - name: Checkout
+      - name: Checkout Repository
         uses: actions/checkout@v4
 
-      # --- GRADLE SHIELD: Force correct versions before anything else ---
       - name: Patch package.json versions
         run: |
           node -e "
@@ -25,10 +24,8 @@ jobs:
             pkg.dependencies['react'] = '18.3.1';
             pkg.dependencies['react-native'] = '0.76.9';
             pkg.overrides = { react: '18.3.1', 'react-native': '0.76.9' };
-            pkg.main = pkg.main === 'expo-router/entry' ? 'node_modules/expo/AppEntry.js' : pkg.main;
+            pkg.main = 'index.js';
             fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2));
-            console.log('Patched react:', pkg.dependencies['react']);
-            console.log('Patched react-native:', pkg.dependencies['react-native']);
           "
 
       - name: Setup Node.js
@@ -46,30 +43,28 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
-      - name: Install Expo CLI
+      - name: Install Expo and EAS CLI
         run: npm install -g expo-cli eas-cli
 
-      - name: Delete stale lockfile
-        run: rm -f package-lock.json
-
       - name: Install dependencies
-        run: npm install --legacy-peer-deps
-
-      - name: Run Gradle Shield
-        run: node fix-build.js
+        run: |
+          rm -f package-lock.json
+          npm install --legacy-peer-deps
 
       - name: Expo Prebuild
         run: npx expo prebuild --clean --platform android
         env:
           EXPO_NO_TELEMETRY: 1
 
+      - name: Apply Double Shield
+        run: |
+          node fix-build.js
+          node patch-llama.js
+
       - name: Build Android APK
         run: |
           cd android
-          ./gradlew assembleRelease \
-            --no-daemon \
-            --stacktrace \
-            -Dorg.gradle.jvmargs="-Xmx4096m -XX:MaxMetaspaceSize=1024m"
+          ./gradlew assembleRelease --no-daemon --stacktrace -Dorg.gradle.jvmargs="-Xmx6g -XX:MaxMetaspaceSize=1024m"
         env:
           ANDROID_HOME: ${{ env.ANDROID_SDK_ROOT }}
 
