@@ -16,7 +16,7 @@ const write = (p, d) => { fs.mkdirSync(path.dirname(p), { recursive: true }); fs
 console.log("\n[RAJU AI] — Running llama.rn New Arch Patcher v2.0...");
 
 if (!fs.existsSync(LLAMA_ROOT)) {
-  console.log("llama.rn not found. Run npm install first.");
+  console.log("llama.rn not found. Skipping patch.");
   process.exit(0);
 }
 
