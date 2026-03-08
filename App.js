@@ -2,7 +2,7 @@
  * ╔══════════════════════════════════════════════════════════════════╗
  * ║          RAJU AI — SOVEREIGN PERSONAL ASSISTANT v1.0            ║
  * ║          "Mera Khazana" Offline-First Digital Twin              ║
- * ║          Expo SDK 52 / React Native 0.76 / New Architecture     ║
+ * ║          Expo SDK 52 / React Native 0.76 / Safe Animations      ║
  * ╚══════════════════════════════════════════════════════════════════╝
  */
 
@@ -10,17 +10,14 @@ import React, { useState, useEffect, useRef } from "react";
 import {
   View, Text, TextInput, TouchableOpacity, ScrollView,
   StyleSheet, Dimensions, Animated, StatusBar, Platform,
-  KeyboardAvoidingView, SafeAreaView, Alert
+  KeyboardAvoidingView, SafeAreaView
 } from "react-native";
 import * as FileSystem from "expo-file-system";
 import * as Network from "expo-network";
-import * as LocalAuthentication from "expo-local-authentication";
 import * as SecureStore from "expo-secure-store";
 import * as Haptics from "expo-haptics";
-import { LinearGradient } from "expo-linear-gradient";
 import { BlurView } from "expo-blur";
 import { GoogleGenerativeAI } from "@google/generative-ai";
-import { initLlama } from "llama.rn";
 
 const { width: W, height: H } = Dimensions.get("window");
 
@@ -30,7 +27,6 @@ const PALETTE = {
   cyanAccent: "#00ffff", silver: "#aaaaaa", white: "#ffffff",
   panelBg: "rgba(0,20,0,0.85)", panelBorder: "rgba(0,255,65,0.2)",
   inputBg: "rgba(0,30,0,0.9)", glowGreen: "rgba(0,255,65,0.15)",
-  crimson: "#ff3333"
 };
 
 const VAULT_ROOT = FileSystem.documentDirectory + "MeraKhazana/";
@@ -44,6 +40,8 @@ const PATHS = {
 const SECURE_KEYS = { gemini: "raju_gemini_api_key" };
 
 // ─── Animations & Effects ────────────────────────────────────────────────
+
+// 1. Matrix Rain Effect
 const useMatrixRain = () => {
   const animations = useRef(
     Array.from({ length: 12 }, () => ({
@@ -88,6 +86,7 @@ const MatrixRain = () => {
   );
 };
 
+// 2. Pulse Dot (Online/Offline Indicator)
 const PulseDot = ({ color = PALETTE.neonGreen, size = 8 }) => {
   const pulse = useRef(new Animated.Value(1)).current;
   useEffect(() => {
@@ -103,6 +102,7 @@ const PulseDot = ({ color = PALETTE.neonGreen, size = 8 }) => {
   );
 };
 
+// 3. Glitch Text
 const GlitchText = ({ text, style }) => {
   const [glitch, setGlitch] = useState(false);
   useEffect(() => {
@@ -116,6 +116,29 @@ const GlitchText = ({ text, style }) => {
     <Text style={[style, glitch && { textShadowColor: PALETTE.cyanAccent, textShadowOffset: { width: 2, height: 0 }, textShadowRadius: 4, color: PALETTE.white }]}>
       {text}
     </Text>
+  );
+};
+
+// 4. Chat Bubble Slide & Fade Animation (NEW 🔥)
+const AnimatedBubble = ({ children, isUser }) => {
+  const slideAnim = useRef(new Animated.Value(20)).current; // Start 20px lower
+  const fadeAnim = useRef(new Animated.Value(0)).current;   // Start invisible
+
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(slideAnim, { toValue: 0, duration: 400, useNativeDriver: true }),
+      Animated.timing(fadeAnim, { toValue: 1, duration: 400, useNativeDriver: true })
+    ]).start();
+  }, []);
+
+  return (
+    <Animated.View style={[
+      styles.bubbleWrapper,
+      isUser ? styles.bubbleWrapperUser : styles.bubbleWrapperAI,
+      { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }
+    ]}>
+      {children}
+    </Animated.View>
   );
 };
 
@@ -282,14 +305,14 @@ const LiveChatScreen = () => {
     <View style={styles.chatContainer}>
       <ScrollView ref={scrollRef} onContentSizeChange={() => scrollRef.current?.scrollToEnd({ animated: true })} contentContainerStyle={styles.chatScroll}>
         {messages.map(msg => (
-          <View key={msg.id} style={[styles.bubbleWrapper, msg.role === "user" ? styles.bubbleWrapperUser : styles.bubbleWrapperAI]}>
+          <AnimatedBubble key={msg.id} isUser={msg.role === "user"}>
             <View style={[styles.bubble, msg.role === "user" ? styles.bubbleUser : styles.bubbleAI]}>
               {msg.role !== "user" && <Text style={{ color: PALETTE.dimGreen, fontSize: 10, marginBottom: 5 }}>[{msg.engine}]</Text>}
               <Text style={{ color: msg.role === "user" ? PALETTE.neonGreen : PALETTE.white, fontSize: 15 }}>{msg.content}</Text>
             </View>
-          </View>
+          </AnimatedBubble>
         ))}
-        {isTyping && <View style={{ padding: 10 }}><PulseDot color={PALETTE.neonGreen} size={10} /></View>}
+        {isTyping && <View style={{ padding: 10, alignSelf: 'flex-start' }}><PulseDot color={PALETTE.neonGreen} size={10} /></View>}
       </ScrollView>
 
       <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={styles.inputArea}>
@@ -309,12 +332,18 @@ export default function App() {
   const [isBooting, setIsBooting] = useState(true);
   const [networkMode, setNetworkMode] = useState("offline");
   const [activeTab, setActiveTab] = useState("chat");
+  
+  // Fade In Animation for Main Screen
+  const mainFadeAnim = useRef(new Animated.Value(0)).current;
 
   const handleBootComplete = async (sysInfo) => {
     setNetworkMode(sysInfo.networkMode);
     const key = await SecureStore.getItemAsync(SECURE_KEYS.gemini);
     if (key) await intelligence.initGemini(key);
     setIsBooting(false);
+    
+    // Start fade-in animation once boot completes
+    Animated.timing(mainFadeAnim, { toValue: 1, duration: 800, useNativeDriver: true }).start();
   };
 
   if (isBooting) return <BootScreen onComplete={handleBootComplete} />;
@@ -322,12 +351,14 @@ export default function App() {
   return (
     <SafeAreaView style={styles.root}>
       <StatusBar barStyle="light-content" backgroundColor={PALETTE.void} />
-      <Header networkMode={networkMode} activeTab={activeTab} onTabChange={setActiveTab} />
-      <View style={styles.mainContent}>
-        {activeTab === "chat" && <LiveChatScreen />}
-        {activeTab === "vault" && <View style={{padding:20}}><Text style={{color:PALETTE.neonGreen, fontSize: 20}}>◈ KHAZANA (Folders Created)</Text></View>}
-        {activeTab === "secure" && <View style={{padding:20}}><Text style={{color:PALETTE.neonGreen, fontSize: 20}}>⬡ SECURE VAULT</Text></View>}
-      </View>
+      <Animated.View style={[styles.mainContent, { opacity: mainFadeAnim }]}>
+        <Header networkMode={networkMode} activeTab={activeTab} onTabChange={setActiveTab} />
+        <View style={styles.mainContent}>
+          {activeTab === "chat" && <LiveChatScreen />}
+          {activeTab === "vault" && <View style={{padding:20}}><Text style={{color:PALETTE.neonGreen, fontSize: 20}}>◈ KHAZANA (Folders Created)</Text></View>}
+          {activeTab === "secure" && <View style={{padding:20}}><Text style={{color:PALETTE.neonGreen, fontSize: 20}}>⬡ SECURE VAULT</Text></View>}
+        </View>
+      </Animated.View>
     </SafeAreaView>
   );
 }
@@ -362,4 +393,4 @@ const styles = StyleSheet.create({
   bootProgressTrack: { width: '100%', height: 4, backgroundColor: '#111', borderRadius: 2 },
   bootProgressFill: { height: '100%', backgroundColor: PALETTE.neonGreen }
 });
-      
+  
