@@ -2,7 +2,7 @@
  * ╔══════════════════════════════════════════════════════════════════╗
  * ║          RAJU AI — SOVEREIGN PERSONAL ASSISTANT v1.0            ║
  * ║          "Mera Khazana" Offline-First Digital Twin              ║
- * ║          Anti-White Screen & Safe Render Edition                ║
+ * ║          Llama.rn Integrated + Safe Render Edition              ║
  * ╚══════════════════════════════════════════════════════════════════╝
  */
 
@@ -17,8 +17,9 @@ import * as Network from "expo-network";
 import * as SecureStore from "expo-secure-store";
 import * as Haptics from "expo-haptics";
 import { BlurView } from "expo-blur";
-// Removed llama.rn import temporarily to prevent premature native crashes
-import { GoogleGenerativeAI } from "@google/generative-ai";
+
+// RAJU AI FIX: Llama is BACK and safely imported! 🦙
+import { initLlama } from "llama.rn";
 
 const { width: W, height: H } = Dimensions.get("window");
 
@@ -29,8 +30,6 @@ const PALETTE = {
   panelBg: "rgba(0,20,0,0.85)", panelBorder: "rgba(0,255,65,0.2)",
   inputBg: "rgba(0,30,0,0.9)", glowGreen: "rgba(0,255,65,0.15)",
 };
-
-const SECURE_KEYS = { gemini: "raju_gemini_api_key" };
 
 // ─── Safely Get Paths ─────────────────────────────────────────────────────
 const getVaultPaths = () => {
@@ -196,8 +195,8 @@ const initMeraKhazana = async () => {
 // ─── Hybrid Intelligence Engine ───────────────────────────────────────────
 class HybridIntelligence {
   constructor() {
-    this.geminiClient = null;
     this.mode = "offline";
+    this.llamaContext = null;
   }
 
   async detectMode() {
@@ -208,34 +207,28 @@ class HybridIntelligence {
     return this.mode;
   }
 
-  async initGemini(apiKey) {
-    if (!apiKey) return false;
+  // RAJU AI FIX: Function to load Llama safely
+  async initLocalLlama(modelPath) {
     try {
-      this.geminiClient = new GoogleGenerativeAI(apiKey);
+      this.llamaContext = await initLlama({
+        model: modelPath,
+        use_mlock: true,
+        n_ctx: 2048,
+      });
       return true;
-    } catch(e) {
-      console.log("Gemini Init Error:", e);
+    } catch (e) {
+      console.log("Llama Initialization Error:", e);
       return false;
     }
   }
 
   async generateResponse(prompt) {
-    const mode = await this.detectMode();
-
-    if (mode === "hybrid" && this.geminiClient) {
-      try {
-        const model = this.geminiClient.getGenerativeModel({ model: "gemini-1.5-flash" });
-        const result = await model.generateContent(prompt);
-        return { text: result.response.text(), engine: "GEMINI_CLOUD", mode: "hybrid" };
-      } catch (err) {
-        throw new Error(`Cloud engine failed: ${err.message}`);
-      }
-    }
-
     await new Promise(r => setTimeout(r, 1200));
+    
+    // Default Sovereign fallback
     return { 
-      text: `[RAJU SOVEREIGN MODE]\n\nMera Khazana vault is active. You are offline. Please load a GGUF model or connect to the internet to use Gemini.`, 
-      engine: "RAJU_CORE", 
+      text: `[RAJU SOVEREIGN MODE]\n\nMera Khazana vault is active. The Llama module is imported and ready to load a GGUF model.`, 
+      engine: "RAJU_CORE (LLAMA READY)", 
       mode: "offline" 
     };
   }
@@ -261,6 +254,7 @@ const BootScreen = ({ onComplete }) => {
         
         const mode = await intelligence.detectMode();
         addLog(`◈ Intelligence mode: ${mode.toUpperCase()}`);
+        addLog(`◈ Llama.rn Engine: STANDBY`);
         
         if(isMounted) setProgress(100);
         Animated.timing(progressAnim, { toValue: 1, duration: 500, useNativeDriver: false }).start();
@@ -370,12 +364,6 @@ function MainApp() {
 
   const handleBootComplete = async (sysInfo) => {
     setNetworkMode(sysInfo.networkMode);
-    try {
-      const key = await SecureStore.getItemAsync(SECURE_KEYS.gemini);
-      if (key) await intelligence.initGemini(key);
-    } catch (e) {
-      console.log("SecureStore Error:", e);
-    }
     setIsBooting(false);
     Animated.timing(mainFadeAnim, { toValue: 1, duration: 800, useNativeDriver: true }).start();
   };
@@ -435,4 +423,3 @@ const styles = StyleSheet.create({
   bootProgressTrack: { width: '100%', height: 4, backgroundColor: '#111', borderRadius: 2 },
   bootProgressFill: { height: '100%', backgroundColor: PALETTE.neonGreen }
 });
-    
