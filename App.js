@@ -2,7 +2,7 @@
  * ╔══════════════════════════════════════════════════════════════════╗
  * ║          RAJU AI — SOVEREIGN PERSONAL ASSISTANT v1.0            ║
  * ║          "Mera Khazana" Offline-First Digital Twin              ║
- * ║          Expo SDK 52 / React Native 0.76 / Safe Animations      ║
+ * ║          Anti-White Screen & Safe Render Edition                ║
  * ╚══════════════════════════════════════════════════════════════════╝
  */
 
@@ -17,6 +17,7 @@ import * as Network from "expo-network";
 import * as SecureStore from "expo-secure-store";
 import * as Haptics from "expo-haptics";
 import { BlurView } from "expo-blur";
+// Removed llama.rn import temporarily to prevent premature native crashes
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
 const { width: W, height: H } = Dimensions.get("window");
@@ -29,19 +30,46 @@ const PALETTE = {
   inputBg: "rgba(0,30,0,0.9)", glowGreen: "rgba(0,255,65,0.15)",
 };
 
-const VAULT_ROOT = FileSystem.documentDirectory + "MeraKhazana/";
-const PATHS = {
-  neuralArchives: VAULT_ROOT + "Neural_Archives/",
-  mediaVault: VAULT_ROOT + "Media_Vault/",
-  chabiManager: VAULT_ROOT + "Chabi_Manager/",
-  neuralModels: VAULT_ROOT + "Neural_Models/",
-};
-
 const SECURE_KEYS = { gemini: "raju_gemini_api_key" };
 
-// ─── Animations & Effects ────────────────────────────────────────────────
+// ─── Safely Get Paths ─────────────────────────────────────────────────────
+const getVaultPaths = () => {
+  const root = FileSystem.documentDirectory ? FileSystem.documentDirectory + "MeraKhazana/" : "file:///MeraKhazana/";
+  return {
+    neuralArchives: root + "Neural_Archives/",
+    mediaVault: root + "Media_Vault/",
+    chabiManager: root + "Chabi_Manager/",
+    neuralModels: root + "Neural_Models/",
+  };
+};
 
-// 1. Matrix Rain Effect
+// ─── Error Boundary (Kills White Screen) ──────────────────────────────────
+class ErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false, errorText: "" };
+  }
+  static getDerivedStateFromError(error) {
+    return { hasError: true, errorText: error.toString() };
+  }
+  componentDidCatch(error, errorInfo) {
+    console.error("APP CRASHED:", error, errorInfo);
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <SafeAreaView style={{ flex: 1, backgroundColor: '#330000', padding: 20, justifyContent: 'center' }}>
+          <Text style={{ color: '#ff4444', fontSize: 24, fontWeight: 'bold', marginBottom: 10 }}>⚠️ CRASH DETECTED</Text>
+          <Text style={{ color: '#fff', fontSize: 14 }}>{this.state.errorText}</Text>
+          <Text style={{ color: '#aaa', fontSize: 12, marginTop: 20 }}>Raju Bhai, is error ka screenshot le lijiye!</Text>
+        </SafeAreaView>
+      );
+    }
+    return this.props.children;
+  }
+}
+
+// ─── Animations & Effects ────────────────────────────────────────────────
 const useMatrixRain = () => {
   const animations = useRef(
     Array.from({ length: 12 }, () => ({
@@ -86,7 +114,6 @@ const MatrixRain = () => {
   );
 };
 
-// 2. Pulse Dot (Online/Offline Indicator)
 const PulseDot = ({ color = PALETTE.neonGreen, size = 8 }) => {
   const pulse = useRef(new Animated.Value(1)).current;
   useEffect(() => {
@@ -97,12 +124,9 @@ const PulseDot = ({ color = PALETTE.neonGreen, size = 8 }) => {
       ])
     ).start();
   }, []);
-  return (
-    <Animated.View style={{ width: size, height: size, borderRadius: size / 2, backgroundColor: color, transform: [{ scale: pulse }] }} />
-  );
+  return <Animated.View style={{ width: size, height: size, borderRadius: size / 2, backgroundColor: color, transform: [{ scale: pulse }] }} />;
 };
 
-// 3. Glitch Text
 const GlitchText = ({ text, style }) => {
   const [glitch, setGlitch] = useState(false);
   useEffect(() => {
@@ -119,10 +143,9 @@ const GlitchText = ({ text, style }) => {
   );
 };
 
-// 4. Chat Bubble Slide & Fade Animation (NEW 🔥)
 const AnimatedBubble = ({ children, isUser }) => {
-  const slideAnim = useRef(new Animated.Value(20)).current; // Start 20px lower
-  const fadeAnim = useRef(new Animated.Value(0)).current;   // Start invisible
+  const slideAnim = useRef(new Animated.Value(20)).current;
+  const fadeAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     Animated.parallel([
@@ -152,7 +175,8 @@ const TerminalLine = ({ text, color = PALETTE.neonGreen, delay = 0 }) => {
 const initMeraKhazana = async () => {
   const logs = [];
   try {
-    for (const [key, path] of Object.entries(PATHS)) {
+    const paths = getVaultPaths();
+    for (const [key, path] of Object.entries(paths)) {
       const info = await FileSystem.getInfoAsync(path);
       if (!info.exists) {
         await FileSystem.makeDirectoryAsync(path, { intermediates: true });
@@ -186,8 +210,13 @@ class HybridIntelligence {
 
   async initGemini(apiKey) {
     if (!apiKey) return false;
-    this.geminiClient = new GoogleGenerativeAI(apiKey);
-    return true;
+    try {
+      this.geminiClient = new GoogleGenerativeAI(apiKey);
+      return true;
+    } catch(e) {
+      console.log("Gemini Init Error:", e);
+      return false;
+    }
   }
 
   async generateResponse(prompt) {
@@ -220,24 +249,30 @@ const BootScreen = ({ onComplete }) => {
   const progressAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
+    let isMounted = true;
     const boot = async () => {
-      const addLog = (msg) => setBootLogs(prev => [...prev, msg]);
-      addLog("▶ RAJU AI SOVEREIGN BOOT v1.0");
-      await new Promise(r => setTimeout(r, 500));
-      
-      const vault = await initMeraKhazana();
-      vault.logs.forEach(addLog);
-      
-      const mode = await intelligence.detectMode();
-      addLog(`◈ Intelligence mode: ${mode.toUpperCase()}`);
-      
-      setProgress(100);
-      Animated.timing(progressAnim, { toValue: 1, duration: 500, useNativeDriver: false }).start();
-      
-      await new Promise(r => setTimeout(r, 1000));
-      onComplete({ networkMode: mode });
+      try {
+        const addLog = (msg) => { if(isMounted) setBootLogs(prev => [...prev, msg]); };
+        addLog("▶ RAJU AI SOVEREIGN BOOT v1.0");
+        await new Promise(r => setTimeout(r, 500));
+        
+        const vault = await initMeraKhazana();
+        vault.logs.forEach(addLog);
+        
+        const mode = await intelligence.detectMode();
+        addLog(`◈ Intelligence mode: ${mode.toUpperCase()}`);
+        
+        if(isMounted) setProgress(100);
+        Animated.timing(progressAnim, { toValue: 1, duration: 500, useNativeDriver: false }).start();
+        
+        await new Promise(r => setTimeout(r, 1000));
+        if(isMounted) onComplete({ networkMode: mode });
+      } catch (e) {
+        if(isMounted) setBootLogs(prev => [...prev, `✗ BOOT ERROR: ${e.message}`]);
+      }
     };
     boot();
+    return () => { isMounted = false; };
   }, []);
 
   return (
@@ -245,7 +280,7 @@ const BootScreen = ({ onComplete }) => {
       <MatrixRain />
       <View style={styles.bootTerminal}>
         <ScrollView showsVerticalScrollIndicator={false} ref={r => r?.scrollToEnd({ animated: true })}>
-          {bootLogs.map((log, i) => <TerminalLine key={i} text={log} delay={i * 50} color={log.includes("█") ? PALETTE.neonGreen : PALETTE.silver} />)}
+          {bootLogs.map((log, i) => <TerminalLine key={i} text={log} delay={i * 50} color={log.includes("█") ? PALETTE.neonGreen : (log.includes("✗") ? PALETTE.crimson : PALETTE.silver)} />)}
         </ScrollView>
       </View>
       <View style={styles.bootProgressTrack}>
@@ -255,7 +290,7 @@ const BootScreen = ({ onComplete }) => {
   );
 };
 
-// ─── Header ───────────────────────────────────────────────────────────────
+// ─── Header & Chat ────────────────────────────────────────────────────────
 const Header = ({ networkMode, activeTab, onTabChange }) => (
   <View style={styles.header}>
     <View style={styles.headerBrand}>
@@ -275,7 +310,6 @@ const Header = ({ networkMode, activeTab, onTabChange }) => (
   </View>
 );
 
-// ─── Live Chat Screen ─────────────────────────────────────────────────────
 const LiveChatScreen = () => {
   const [messages, setMessages] = useState([{ id: "1", role: "assistant", content: "Namaste Raju Bhai. Mera Khazana is secure. How can I assist you?", engine: "RAJU_CORE", mode: "sovereign" }]);
   const [input, setInput] = useState("");
@@ -327,22 +361,22 @@ const LiveChatScreen = () => {
   );
 };
 
-// ─── Main App ─────────────────────────────────────────────────────────────
-export default function App() {
+// ─── Main App Wrapped Component ───────────────────────────────────────────
+function MainApp() {
   const [isBooting, setIsBooting] = useState(true);
   const [networkMode, setNetworkMode] = useState("offline");
   const [activeTab, setActiveTab] = useState("chat");
-  
-  // Fade In Animation for Main Screen
   const mainFadeAnim = useRef(new Animated.Value(0)).current;
 
   const handleBootComplete = async (sysInfo) => {
     setNetworkMode(sysInfo.networkMode);
-    const key = await SecureStore.getItemAsync(SECURE_KEYS.gemini);
-    if (key) await intelligence.initGemini(key);
+    try {
+      const key = await SecureStore.getItemAsync(SECURE_KEYS.gemini);
+      if (key) await intelligence.initGemini(key);
+    } catch (e) {
+      console.log("SecureStore Error:", e);
+    }
     setIsBooting(false);
-    
-    // Start fade-in animation once boot completes
     Animated.timing(mainFadeAnim, { toValue: 1, duration: 800, useNativeDriver: true }).start();
   };
 
@@ -360,6 +394,14 @@ export default function App() {
         </View>
       </Animated.View>
     </SafeAreaView>
+  );
+}
+
+export default function App() {
+  return (
+    <ErrorBoundary>
+      <MainApp />
+    </ErrorBoundary>
   );
 }
 
@@ -393,4 +435,4 @@ const styles = StyleSheet.create({
   bootProgressTrack: { width: '100%', height: 4, backgroundColor: '#111', borderRadius: 2 },
   bootProgressFill: { height: '100%', backgroundColor: PALETTE.neonGreen }
 });
-  
+    
