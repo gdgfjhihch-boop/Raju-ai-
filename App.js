@@ -1,7 +1,7 @@
 /**
  * ╔══════════════════════════════════════════════════════════════════╗
- * ║          RAJU AI — SOVEREIGN PERSONAL ASSISTANT v6.0            ║
- * ║          STEP 1: 4 Rooms UI & 100% API Privacy (No Leak)        ║
+ * ║          RAJU AI — SOVEREIGN PERSONAL ASSISTANT v6.1            ║
+ * ║          API URL Fixed & Llama Prompt Improved                  ║
  * ╚══════════════════════════════════════════════════════════════════╝
  */
 
@@ -42,7 +42,7 @@ class ErrorBoundary extends React.Component {
 }
 
 function MainApp() {
-  const [activeTab, setActiveTab] = useState("CHAT"); // CHAT, SKILLS, VAULT, SETTINGS
+  const [activeTab, setActiveTab] = useState("CHAT"); 
   
   const [useCloud, setUseCloud] = useState(false);
   const [apiKey, setApiKey] = useState("");
@@ -54,7 +54,7 @@ function MainApp() {
   const [isDownloading, setIsDownloading] = useState(false);
   const [downloadProgress, setDownloadProgress] = useState(0);
   
-  const [messages, setMessages] = useState([{ id: "1", role: "ai", text: "Namaste Raju Bhai! 4 Kamron wala naya killa taiyar hai. Privacy 100% lock hai." }]);
+  const [messages, setMessages] = useState([{ id: "1", role: "ai", text: "Namaste Raju Bhai! API ka link theek kar diya gaya hai. Test shuru karein!" }]);
   const [input, setInput] = useState("");
   const [isThinking, setIsThinking] = useState(false);
   const scrollRef = useRef(null);
@@ -120,7 +120,7 @@ function MainApp() {
     setIsThinking(false);
   };
 
-  // ─── 🛡️ STEP 1: PRIVACY FIRST CHAT LOGIC ───
+  // ─── 🛡️ CHAT LOGIC ───
   const sendMessage = async () => {
     if (!input.trim()) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -131,9 +131,10 @@ function MainApp() {
     if (useCloud) {
       if (!apiKey) { setMessages(prev => [...prev, { id: Date.now().toString(), role: "ai", text: "⚠️ API Key missing. Settings mein daalein." }]); setIsThinking(false); return; }
       try {
-        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+        // ✅ YAHAN MAINE LINK THEEK KAR DIYA HAI (-latest laga diya)
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${apiKey}`;
         
-        // 🛑 PRIVACY LOCK: No history sent. Only the current single prompt.
+        // Privacy Lock: Only sending current prompt
         const safePrompt = `${userText}\n(Respond naturally in Hindi/Hinglish)`;
         
         const response = await fetch(url, {
@@ -147,7 +148,8 @@ function MainApp() {
     } else {
       if (!isModelLoaded || !llamaContext) { setMessages(prev => [...prev, { id: Date.now().toString(), role: "ai", text: "⚠️ Offline Model is not running. Go to Settings." }]); setIsThinking(false); return; }
       try {
-        const prompt = `<|system|>\nYou are Raju AI. Keep answers brief.\n</s>\n<|user|>\n${userText}</s>\n<|assistant|>\n`;
+        // 🧠 Llama ka prompt aur strict kar diya taaki paglaaye nahi
+        const prompt = `<|system|>\nYou are Raju AI, a helpful, precise, and highly focused personal assistant. Never repeat yourself. Keep answers to the point.\n</s>\n<|user|>\n${userText}</s>\n<|assistant|>\n`;
         const result = await llamaContext.completion({ prompt: prompt, n_predict: 150, stop: ["</s>", "<|user|>"] });
         setMessages(prev => [...prev, { id: Date.now().toString(), role: "ai", text: result.text.trim(), mode: "offline" }]);
       } catch (error) { setMessages(prev => [...prev, { id: Date.now().toString(), role: "ai", text: "❌ Offline Error: " + error.message }]); }
@@ -159,7 +161,6 @@ function MainApp() {
     <SafeAreaView style={styles.root}>
       <StatusBar barStyle="light-content" backgroundColor={COLORS.surface} />
       
-      {/* ─── Top Header ─── */}
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Raju AI</Text>
         <View style={styles.onlineStatus}>
@@ -168,7 +169,6 @@ function MainApp() {
         </View>
       </View>
 
-      {/* ─── ROOM 1: CHAT ─── */}
       {activeTab === "CHAT" && (
         <View style={styles.screenContainer}>
           <View style={styles.switchContainer}>
@@ -198,33 +198,28 @@ function MainApp() {
         </View>
       )}
 
-      {/* ─── ROOM 2: SKILLS (Under Construction) ─── */}
       {activeTab === "SKILLS" && (
         <View style={styles.screenPadding}>
           <Text style={styles.sectionTitle}>🧠 Skills Library</Text>
-          <Text style={styles.descText}>Yahan Raju AI ki seekhi hui nayi skills aayengi (e.g. Stock Expert, Coder).</Text>
+          <Text style={styles.descText}>Yahan Raju AI ki seekhi hui nayi skills aayengi.</Text>
           <View style={[styles.card, {alignItems: 'center', marginTop: 50, borderStyle: 'dashed'}]}>
             <Text style={{fontSize: 40}}>🚧</Text>
             <Text style={[styles.cardTitle, {marginTop: 10}]}>Under Construction</Text>
-            <Text style={{color: COLORS.textMuted, textAlign: 'center'}}>Step 5 mein hum yahan Auto-Skill generator lagayenge.</Text>
           </View>
         </View>
       )}
 
-      {/* ─── ROOM 3: KHAZANA (Under Construction) ─── */}
       {activeTab === "VAULT" && (
         <View style={styles.screenPadding}>
           <Text style={styles.sectionTitle}>📁 Mera Khazana</Text>
-          <Text style={styles.descText}>Aapka 100% private aur secure vault.</Text>
+          <Text style={styles.descText}>Aapka 100% private vault.</Text>
           <View style={[styles.card, {alignItems: 'center', marginTop: 50, borderColor: COLORS.warning}]}>
             <Text style={{fontSize: 40}}>🔒</Text>
             <Text style={[styles.cardTitle, {color: COLORS.warning, marginTop: 10}]}>Biometric Lock Required</Text>
-            <Text style={{color: COLORS.textMuted, textAlign: 'center'}}>Step 6 mein yahan Fingerprint lock aur private files ka system aayega.</Text>
           </View>
         </View>
       )}
 
-      {/* ─── ROOM 4: SETTINGS & MODEL ─── */}
       {activeTab === "SETTINGS" && (
         <ScrollView style={styles.screenPadding}>
           <Text style={styles.sectionTitle}>⚙️ Master Settings</Text>
@@ -262,7 +257,6 @@ function MainApp() {
         </ScrollView>
       )}
 
-      {/* ─── BOTTOM NAVIGATION BAR ─── */}
       <View style={styles.bottomNav}>
         <TouchableOpacity style={styles.navItem} onPress={() => setActiveTab("CHAT")}>
           <Text style={styles.navIcon}>{activeTab === "CHAT" ? "💬" : "🗨️"}</Text>
@@ -295,19 +289,16 @@ const styles = StyleSheet.create({
   onlineStatus: { flexDirection: 'row', alignItems: 'center' },
   onlineDot: { width: 8, height: 8, borderRadius: 4, marginRight: 6 },
   headerSubtitle: { color: COLORS.textMuted, fontSize: 12 },
-  
   screenContainer: { flex: 1 },
   screenPadding: { flex: 1, padding: 20 },
   sectionTitle: { color: COLORS.textMain, fontSize: 24, fontWeight: 'bold', marginBottom: 5 },
   descText: { color: COLORS.textMuted, fontSize: 14, marginBottom: 20 },
-  
   card: { backgroundColor: COLORS.surface, padding: 20, borderRadius: 12, borderWidth: 1, borderColor: COLORS.border },
   cardTitle: { color: COLORS.textMain, fontSize: 18, fontWeight: 'bold', marginBottom: 10 },
   actionBtn: { padding: 15, borderRadius: 8, alignItems: 'center', backgroundColor: COLORS.primary },
   actionBtnText: { color: '#fff', fontSize: 16, fontWeight: 'bold' },
   successText: { color: COLORS.primary, fontSize: 14, fontWeight: 'bold', textAlign: 'center' },
   keyInput: { backgroundColor: COLORS.background, color: COLORS.textMain, borderWidth: 1, borderColor: COLORS.border, borderRadius: 8, padding: 12, fontSize: 16 },
-  
   switchContainer: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', padding: 10, backgroundColor: COLORS.surface, borderBottomWidth: 1, borderColor: COLORS.border, gap: 10 },
   chatScrollArea: { padding: 15, paddingBottom: 20 },
   messageRow: { marginBottom: 15, flexDirection: 'row' },
@@ -317,12 +308,10 @@ const styles = StyleSheet.create({
   bubbleUser: { backgroundColor: COLORS.surface, borderWidth: 1, borderColor: COLORS.border, borderBottomRightRadius: 4 },
   bubbleAI: { backgroundColor: 'transparent', borderBottomLeftRadius: 4 },
   messageText: { color: COLORS.textMain, fontSize: 16, lineHeight: 22 },
-  
   inputContainer: { flexDirection: 'row', padding: 12, backgroundColor: COLORS.surface, alignItems: 'flex-end', borderTopWidth: 1, borderColor: COLORS.border },
   textInput: { flex: 1, backgroundColor: COLORS.background, color: COLORS.textMain, fontSize: 16, minHeight: 48, maxHeight: 120, borderRadius: 24, paddingHorizontal: 16, paddingTop: 12, paddingBottom: 12, marginRight: 10, borderWidth: 1, borderColor: COLORS.border },
   sendButton: { width: 48, height: 48, borderRadius: 24, justifyContent: 'center', alignItems: 'center' },
   sendIcon: { color: COLORS.textMain, fontSize: 20, marginLeft: 2 },
-
   bottomNav: { flexDirection: 'row', backgroundColor: COLORS.surface, borderTopWidth: 1, borderColor: COLORS.border, paddingBottom: Platform.OS === 'ios' ? 20 : 10, paddingTop: 10 },
   navItem: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   navIcon: { fontSize: 22, marginBottom: 4 },
