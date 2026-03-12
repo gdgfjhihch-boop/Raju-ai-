@@ -1,6 +1,6 @@
 /**
  * ╔══════════════════════════════════════════════════════════════════╗
- * ║          RAJU AI — SOVEREIGN PERSONAL ASSISTANT v8.5            ║
+ * ║          RAJU AI — SOVEREIGN PERSONAL ASSISTANT v8.5 (FIXED)      ║
  * ║          FULLY FUNCTIONAL: Vault + Khazana + Real API/Offline   ║
  * ╚══════════════════════════════════════════════════════════════════╝
  */
@@ -40,7 +40,7 @@ export default function App() {
   const [isModelLoaded, setIsModelLoaded] = useState(false);
   const [modelExists, setModelExists] = useState(false);
   
-  const [messages, setMessages] = useState([{ id: "1", role: "ai", text: "Namaste Raju Bhai! Ab sab kuch ASLI chal raha hai. API test kijiye ya Offline Start kijiye!" }]);
+  const [messages, setMessages] = useState([{ id: "1", role: "ai", text: "Namaste Raju Bhai! App ka syntax error fix ho gaya hai. Ab sab kuch ASLI chal raha hai!" }]);
   const [input, setInput] = useState("");
   const [isThinking, setIsThinking] = useState(false);
   const scrollRef = useRef(null);
@@ -55,7 +55,10 @@ export default function App() {
     initKhazana(); 
   }, []);
 
-  const checkModelExists = async () => { const info = await FileSystem.getInfoAsync(modelPath); setModelExists(info.exists); };
+  const checkModelExists = async () => { 
+    const info = await FileSystem.getInfoAsync(modelPath); 
+    setModelExists(info.exists); 
+  };
 
   // ─── 📁 KHAZANA (FILE MANAGER) LOGIC ───
   const initKhazana = async () => {
@@ -65,18 +68,30 @@ export default function App() {
   };
 
   const loadKhazanaFiles = async () => {
-    try { const files = await FileSystem.readDirectoryAsync(KHAZANA_DIR); setKhazanaItems(files); } catch (e) { console.log(e); }
+    try { 
+      const files = await FileSystem.readDirectoryAsync(KHAZANA_DIR); 
+      setKhazanaItems(files); 
+    } catch (e) { 
+      console.log(e); 
+    }
   };
 
   const createFolderManually = async () => {
     if(!newFolderName.trim()) return;
     await FileSystem.makeDirectoryAsync(KHAZANA_DIR + newFolderName.trim() + "/", { intermediates: true });
-    setNewFolderName(""); loadKhazanaFiles(); Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    setNewFolderName(""); 
+    loadKhazanaFiles(); 
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
   };
 
   const deleteKhazanaItem = async (itemName) => {
     Alert.alert("Delete?", `${itemName} ko hamesha ke liye delete karein?`, [
-      { text: "Cancel", style: "cancel" }, { text: "Delete", style: "destructive", onPress: async () => { await FileSystem.deleteAsync(KHAZANA_DIR + itemName, { idempotent: true }); loadKhazanaFiles(); }}
+      { text: "Cancel", style: "cancel" }, 
+      { text: "Delete", style: "destructive", onPress: async () => { 
+          await FileSystem.deleteAsync(KHAZANA_DIR + itemName, { idempotent: true }); 
+          loadKhazanaFiles(); 
+        }
+      }
     ]);
   };
 
@@ -94,29 +109,41 @@ export default function App() {
     const keyToSave = inputKey.trim();
     if(!keyToSave) return;
     let provider = "unknown", type = "engine", color = COLORS.textMuted;
+    
     if (keyToSave.startsWith("AIza")) { provider = "Gemini"; color = COLORS.cloud; }
     else if (keyToSave.startsWith("sk-")) { provider = "OpenAI"; color = COLORS.openai; }
     else if (keyToSave.startsWith("gsk_")) { provider = "Groq"; color = COLORS.primary; }
     else if (keyToSave.startsWith("tvly-")) { provider = "Tavily Search"; type = "tool"; color = COLORS.tool; } 
+    
     if (provider === "unknown") { alert("Unknown API Key!"); return; }
 
     const newConn = { id: Date.now().toString(), provider, key: keyToSave, type, color };
     const updatedConns = [...connections, newConn];
     await SecureStore.setItemAsync(SECURE_CONNECTIONS, JSON.stringify(updatedConns));
     setConnections(updatedConns);
-    if (type === "engine" && !activeEngineId) { setActiveEngineId(newConn.id); await SecureStore.setItemAsync(SECURE_ACTIVE_ENGINE, newConn.id); }
-    setInputKey(""); setIsAddingApi(false);
+    
+    if (type === "engine" && !activeEngineId) { 
+      setActiveEngineId(newConn.id); 
+      await SecureStore.setItemAsync(SECURE_ACTIVE_ENGINE, newConn.id); 
+    }
+    setInputKey(""); 
+    setIsAddingApi(false);
   };
 
   const deleteConnection = async (id) => {
     const updated = connections.filter(c => c.id !== id);
     await SecureStore.setItemAsync(SECURE_CONNECTIONS, JSON.stringify(updated));
     setConnections(updated);
-    if (activeEngineId === id) { setActiveEngineId(null); await SecureStore.deleteItemAsync(SECURE_ACTIVE_ENGINE); }
+    if (activeEngineId === id) { 
+      setActiveEngineId(null); 
+      await SecureStore.deleteItemAsync(SECURE_ACTIVE_ENGINE); 
+    }
   };
 
   const makeActiveEngine = async (id) => {
-    setActiveEngineId(id); await SecureStore.setItemAsync(SECURE_ACTIVE_ENGINE, id); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setActiveEngineId(id); 
+    await SecureStore.setItemAsync(SECURE_ACTIVE_ENGINE, id); 
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
   };
 
   // ─── 🧠 ASLI OFFLINE MODEL LOADER ───
@@ -124,8 +151,13 @@ export default function App() {
     try { 
       setIsThinking(true); 
       const context = await initLlama({ model: modelPath, use_mlock: true, n_ctx: 1024 }); 
-      setLlamaContext(context); setIsModelLoaded(true); setUseCloud(false); setActiveTab("CHAT");
-    } catch (e) { alert("Load Error: " + e.message); }
+      setLlamaContext(context); 
+      setIsModelLoaded(true); 
+      setUseCloud(false); 
+      setActiveTab("CHAT");
+    } catch (e) { 
+      alert("Load Error: " + e.message); 
+    }
     setIsThinking(false);
   };
 
@@ -134,7 +166,8 @@ export default function App() {
     if (!input.trim()) return;
     const userText = input.trim();
     setMessages(prev => [...prev, { id: Date.now().toString(), role: "user", text: userText }]);
-    setInput(""); setIsThinking(true);
+    setInput(""); 
+    setIsThinking(true);
 
     // 1. Agentic Khazana Intercept
     const lowerText = userText.toLowerCase();
@@ -161,7 +194,11 @@ export default function App() {
     // 2. Cloud (API) Routing
     if (useCloud) {
       let activeConn = connections.find(c => c.id === activeEngineId);
-      if (!activeConn) { setMessages(prev => [...prev, { id: Date.now().toString(), role: "ai", text: "⚠️ Koi Active Engine select nahi kiya hai Settings mein." }]); setIsThinking(false); return; }
+      if (!activeConn) { 
+        setMessages(prev => [...prev, { id: Date.now().toString(), role: "ai", text: "⚠️ Koi Active Engine select nahi kiya hai Settings mein." }]); 
+        setIsThinking(false); 
+        return; 
+      }
       
       try {
         let aiResponseText = "";
@@ -179,18 +216,28 @@ export default function App() {
           const data = await response.json();
           if (data.error) throw new Error(data.error.message);
           aiResponseText = data.choices[0].message.content;
-        } else { aiResponseText = "⚠️ Ye engine abhi chat ke liye configure nahi hai."; }
+        } else { 
+          aiResponseText = "⚠️ Ye engine abhi chat ke liye configure nahi hai."; 
+        }
         
         setMessages(prev => [...prev, { id: Date.now().toString(), role: "ai", text: aiResponseText, routerStatus: `☁️ ${activeConn.provider}` }]);
-      } catch (error) { setMessages(prev => [...prev, { id: Date.now().toString(), role: "ai", text: `❌ API Error: ` + error.message }]); }
+      } catch (error) { 
+        setMessages(prev => [...prev, { id: Date.now().toString(), role: "ai", text: `❌ API Error: ` + error.message }]); 
+      }
     } 
     // 3. Offline Llama Routing
     else {
-      if (!isModelLoaded || !llamaContext) { setMessages(prev => [...prev, { id: Date.now().toString(), role: "ai", text: "⚠️ Offline Model start nahi hua hai. Settings se start karein." }]); setIsThinking(false); return; }
+      if (!isModelLoaded || !llamaContext) { 
+        setMessages(prev => [...prev, { id: Date.now().toString(), role: "ai", text: "⚠️ Offline Model start nahi hua hai. Settings se start karein." }]); 
+        setIsThinking(false); 
+        return; 
+      }
       try {
         const result = await llamaContext.completion({ prompt: `<|system|>\nYou are Raju AI. Keep answers short.\n</s>\n<|user|>\n${userText}</s>\n<|assistant|>\n`, n_predict: 150 });
         setMessages(prev => [...prev, { id: Date.now().toString(), role: "ai", text: result.text.trim(), routerStatus: "🧠 Offline Llama" }]);
-      } catch (error) { setMessages(prev => [...prev, { id: Date.now().toString(), role: "ai", text: "❌ Offline Error: " + error.message }]); }
+      } catch (error) { 
+        setMessages(prev => [...prev, { id: Date.now().toString(), role: "ai", text: "❌ Offline Error: " + error.message }]); 
+      }
     }
     setIsThinking(false);
   };
@@ -317,5 +364,16 @@ export default function App() {
   );
 }
 
+// ─── STYLES (Fixes the Syntax Error) ───
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: COLORS.background }, header: { padding: 15, backgroundColor: COLORS.surface, flexDirection: "row", justifyContent: "space-between", alignItems: "center", borderBottomWidth: 1, borderColor: COLORS.border }, headerTitle: { color: COLORS.textMain, fontSize: 20, fontWeight: 'bold' }, screenContainer: { flex: 1 }, screenPadding: { flex: 1, padding: 20 }, sectionTitle: { color: COLORS.textMain, fontSize: 24, fontWeight: 'bold', marginBottom: 5 }, card: { backgroundColor: COLORS.surface, padding: 20, borderRadius: 12, borderWidth: 1, borderColor: COLORS.border }, cardTitle: { color: COLORS.textMain, fontSize: 18, fontWeight: 'bold', marginBottom: 10 }, actionBtn: { padding: 12, borderRadius: 8, alignItems: 'center', justifyContent: 'center' }, actionBtnText: { color: '#fff', fontSize: 16, fontWeight: 'bold' }, keyInput: { backgroundColor: COLORS.background, color: COLORS.textMain, borderWidth: 1, borderColor: COLORS.border, borderRadius: 8, padding: 12, fontSize: 16 }, switchContainer: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', padding: 10, backgroundColor: COLORS.surface, borderBottomWidth: 1, borderColor: COLORS.border, gap: 10 }, chatScrollArea: { padding: 15, paddingBottom: 20 }, messageRow: { ma
+  root: { flex: 1, backgroundColor: COLORS.background },
+  header: { padding: 15, backgroundColor: COLORS.surface, flexDirection: "row", justifyContent: "space-between", alignItems: "center", borderBottomWidth: 1, borderColor: COLORS.border },
+  headerTitle: { color: COLORS.textMain, fontSize: 20, fontWeight: 'bold' },
+  screenContainer: { flex: 1 },
+  screenPadding: { flex: 1, padding: 20 },
+  sectionTitle: { color: COLORS.textMain, fontSize: 24, fontWeight: 'bold', marginBottom: 5 },
+  card: { backgroundColor: COLORS.surface, padding: 20, borderRadius: 12, borderWidth: 1, borderColor: COLORS.border },
+  cardTitle: { color: COLORS.textMain, fontSize: 18, fontWeight: 'bold', marginBottom: 10 },
+  actionBtn: { padding: 12, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
+  actionBtnText: { color: '#fff', fontSize: 16, fontWeight: 'bold' },
+  keyInput: { backgroundColor: COLORS.back
