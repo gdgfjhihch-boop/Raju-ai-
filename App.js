@@ -1,6 +1,7 @@
 /**
  * ╔══════════════════════════════════════════════════════════════════╗
- * ║          RAJU AI — SOVEREIGN PERSONAL ASSISTANT v8.5            ║
+ * ║          RAJU AI — SOVEREIGN PERSONAL ASSISTANT v8.6            ║
+ * ║          FIXED: Gemini API Name + Offline Model Downloader      ║
  * ╚══════════════════════════════════════════════════════════════════╝
  */
 
@@ -21,6 +22,7 @@ const COLORS = {
   openai: "#10A37F", tool: "#8B5CF6", folder: "#FBBF24"
 };
 
+const MODEL_URL = "https://huggingface.co/TheBloke/TinyLlama-1.1B-Chat-v1.0-GGUF/resolve/main/tinyllama-1.1b-chat-v1.0.Q2_K.gguf";
 const MODEL_FILE_NAME = "tinyllama-1.1b.gguf";
 const SECURE_CONNECTIONS = "raju_api_connections"; 
 const SECURE_ACTIVE_ENGINE = "raju_active_engine";
@@ -28,7 +30,7 @@ const KHAZANA_DIR = FileSystem.documentDirectory + "Raju_Khazana/";
 
 export default function App() {
   const [activeTab, setActiveTab] = useState("CHAT"); 
-  const [useCloud, setUseCloud] = useState(false);
+  const [useCloud, setUseCloud] = useState(true); 
   
   const [connections, setConnections] = useState([]); 
   const [activeEngineId, setActiveEngineId] = useState(null); 
@@ -38,9 +40,11 @@ export default function App() {
   const [llamaContext, setLlamaContext] = useState(null);
   const [isModelLoaded, setIsModelLoaded] = useState(false);
   const [modelExists, setModelExists] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
+  const [downloadProgress, setDownloadProgress] = useState(0);
   
   const [messages, setMessages] = useState([
-    { id: "1", role: "ai", text: "Namaste Raju Bhai! App ka code successfully update ho gaya hai. Test kijiye!" }
+    { id: "1", role: "ai", text: "Namaste Raju Bhai! Gemini API fix ho gayi hai aur Download button bhi aa gaya hai." }
   ]);
   const [input, setInput] = useState("");
   const [isThinking, setIsThinking] = useState(false);
@@ -61,19 +65,35 @@ export default function App() {
     setModelExists(info.exists); 
   };
 
+  const downloadModel = async () => {
+    setIsDownloading(true);
+    try {
+      const downloadResumable = FileSystem.createDownloadResumable(
+        MODEL_URL, modelPath, {},
+        (downloadProgress) => {
+          const progress = downloadProgress.totalBytesWritten / downloadProgress.totalBytesExpectedToWrite;
+          setDownloadProgress(Math.round(progress * 100));
+        }
+      );
+      await downloadResumable.downloadAsync();
+      setModelExists(true);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    } catch (e) {
+      alert("Download failed: " + e.message);
+    }
+    setIsDownloading(false);
+    setDownloadProgress(0);
+  };
+
   const initKhazana = async () => {
     const dirInfo = await FileSystem.getInfoAsync(KHAZANA_DIR);
-    if (!dirInfo.exists) {
-      await FileSystem.makeDirectoryAsync(KHAZANA_DIR, { intermediates: true });
-    }
+    if (!dirInfo.exists) await FileSystem.makeDirectoryAsync(KHAZANA_DIR, { intermediates: true });
     loadKhazanaFiles();
   };
 
   const loadKhazanaFiles = async () => {
-    try { 
-      const files = await FileSystem.readDirectoryAsync(KHAZANA_DIR); 
-      setKhazanaItems(files); 
-    } catch (e) { console.log("Khazana error:", e); }
+    try { const files = await FileSystem.readDirectoryAsync(KHAZANA_DIR); setKhazanaItems(files); } 
+    catch (e) { console.log(e); }
   };
 
   const createFolderManually = async () => {
@@ -83,12 +103,9 @@ export default function App() {
   };
 
   const deleteKhazanaItem = async (itemName) => {
-    Alert.alert("Delete?", `${itemName} ko hamesha ke liye delete karein?`, [
+    Alert.alert("Delete?", `${itemName} ko delete karein?`, [
       { text: "Cancel", style: "cancel" }, 
-      { text: "Delete", style: "destructive", onPress: async () => { 
-          await FileSystem.deleteAsync(KHAZANA_DIR + itemName, { idempotent: true }); loadKhazanaFiles(); 
-        }
-      }
+      { text: "Delete", style: "destructive", onPress: async () => { await FileSystem.deleteAsync(KHAZANA_DIR + itemName, { idempotent: true }); loadKhazanaFiles(); } }
     ]);
   };
 
@@ -98,7 +115,7 @@ export default function App() {
       const savedActive = await SecureStore.getItemAsync(SECURE_ACTIVE_ENGINE);
       if (savedConns) setConnections(JSON.parse(savedConns));
       if (savedActive) setActiveEngineId(savedActive);
-    } catch(e) { console.log("Connection load error:", e); }
+    } catch(e) {}
   };
 
   const saveNewConnection = async () => {
@@ -108,15 +125,14 @@ export default function App() {
     
     if (keyToSave.startsWith("AIza")) { provider = "Gemini"; color = COLORS.cloud; }
     else if (keyToSave.startsWith("sk-")) { provider = "OpenAI"; color = COLORS.openai; }
-    else if (keyToSave.startsWith("gsk_")) { provider = "Groq"; color = COLORS.primary; }
     else if (keyToSave.startsWith("tvly-")) { provider = "Tavily Search"; type = "tool"; color = COLORS.tool; } 
-    
     if (provider === "unknown") { alert("Unknown API Key!"); return; }
 
     const newConn = { id: Date.now().toString(), provider, key: keyToSave, type, color };
     const updatedConns = [...connections, newConn];
     await SecureStore.setItemAsync(SECURE_CONNECTIONS, JSON.stringify(updatedConns));
     setConnections(updatedConns);
+    
     if (type === "engine" && !activeEngineId) { setActiveEngineId(newConn.id); await SecureStore.setItemAsync(SECURE_ACTIVE_ENGINE, newConn.id); }
     setInputKey(""); setIsAddingApi(false);
   };
@@ -133,11 +149,8 @@ export default function App() {
   };
 
   const loadOfflineModel = async () => {
-    try { 
-      setIsThinking(true); 
-      const context = await initLlama({ model: modelPath, use_mlock: true, n_ctx: 1024 }); 
-      setLlamaContext(context); setIsModelLoaded(true); setUseCloud(false); setActiveTab("CHAT");
-    } catch (e) { alert("Load Error: " + e.message); }
+    try { setIsThinking(true); const context = await initLlama({ model: modelPath, use_mlock: true, n_ctx: 1024 }); setLlamaContext(context); setIsModelLoaded(true); setUseCloud(false); setActiveTab("CHAT"); } 
+    catch (e) { alert("Load Error: " + e.message); }
     setIsThinking(false);
   };
 
@@ -174,7 +187,7 @@ export default function App() {
       try {
         let aiResponseText = "";
         if (activeConn.provider === "Gemini") {
-          const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${activeConn.key}`, {
+          const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${activeConn.key}`, {
             method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ contents: [{ parts: [{ text: `${userText}\n(Respond briefly in Hindi)` }] }] })
           });
           const data = await response.json();
@@ -199,13 +212,12 @@ export default function App() {
     }
     setIsThinking(false);
   };
-        return (
+    return (
     <SafeAreaView style={styles.root}>
       <StatusBar barStyle="light-content" backgroundColor={COLORS.surface} />
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Raju AI</Text>
-      </View>
+      <View style={styles.header}><Text style={styles.headerTitle}>Raju AI</Text></View>
 
+      {/* 💬 CHAT TAB */}
       {activeTab === "CHAT" && (
         <View style={styles.screenContainer}>
           <View style={styles.switchContainer}>
@@ -233,6 +245,7 @@ export default function App() {
         </View>
       )}
 
+      {/* 📁 KHAZANA TAB */}
       {activeTab === "KHAZANA" && (
         <ScrollView style={styles.screenPadding}>
           <Text style={styles.sectionTitle}>📁 Mera Khazana</Text>
@@ -240,9 +253,7 @@ export default function App() {
              <Text style={styles.cardTitle}>➕ Create Manually</Text>
              <View style={{flexDirection: 'row', alignItems: 'center'}}>
                 <TextInput style={[styles.keyInput, {flex: 1, marginRight: 10}]} placeholder="Folder Name..." placeholderTextColor={COLORS.textMuted} value={newFolderName} onChangeText={setNewFolderName} />
-                <TouchableOpacity style={[styles.actionBtn, {backgroundColor: COLORS.folder, paddingHorizontal: 15}]} onPress={createFolderManually}>
-                  <Text style={{color: '#000', fontWeight: 'bold'}}>Create</Text>
-                </TouchableOpacity>
+                <TouchableOpacity style={[styles.actionBtn, {backgroundColor: COLORS.folder, paddingHorizontal: 15}]} onPress={createFolderManually}><Text style={{color: '#000', fontWeight: 'bold'}}>Create</Text></TouchableOpacity>
              </View>
           </View>
           <View style={styles.card}>
@@ -250,22 +261,28 @@ export default function App() {
              {khazanaItems.length === 0 ? <Text style={{color: COLORS.textMuted}}>Khazana khali hai.</Text> : khazanaItems.map((item, index) => (
                  <View key={index} style={{flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 12, borderBottomWidth: 1, borderColor: COLORS.border}}>
                      <Text style={{color: COLORS.textMain, fontSize: 16}}>{item.includes('.txt') ? '📄' : '📁'} {item}</Text>
-                     <TouchableOpacity onPress={() => deleteKhazanaItem(item)}>
-                       <Text style={{color: COLORS.danger}}>🗑️</Text>
-                     </TouchableOpacity>
+                     <TouchableOpacity onPress={() => deleteKhazanaItem(item)}><Text style={{color: COLORS.danger}}>🗑️</Text></TouchableOpacity>
                  </View>
              ))}
           </View>
         </ScrollView>
       )}
 
+      {/* ⚙️ SETTINGS TAB */}
       {activeTab === "SETTINGS" && (
         <ScrollView style={styles.screenPadding}>
           <Text style={styles.sectionTitle}>⚙️ Settings & Vault</Text>
           
           <View style={[styles.card, {marginBottom: 20}]}>
             <Text style={styles.cardTitle}>🧠 Offline Local Engine</Text>
-            {!modelExists ? ( <Text style={{color: COLORS.textMuted}}>Model not found on device.</Text> ) : (
+            {!modelExists ? (
+              <View>
+                <Text style={{color: COLORS.textMuted, marginBottom: 10}}>Model not found on device.</Text>
+                <TouchableOpacity style={[styles.actionBtn, {backgroundColor: COLORS.cloud}]} onPress={downloadModel} disabled={isDownloading}>
+                  <Text style={styles.actionBtnText}>{isDownloading ? `Downloading... ${downloadProgress}%` : "⬇️ Download Model"}</Text>
+                </TouchableOpacity>
+              </View>
+            ) : (
               !isModelLoaded ? (
                 <TouchableOpacity style={[styles.actionBtn, {backgroundColor: COLORS.warning}]} onPress={loadOfflineModel} disabled={isThinking}>
                   <Text style={styles.actionBtnText}>{isThinking ? "Starting..." : "Start Offline AI"}</Text>
@@ -277,16 +294,12 @@ export default function App() {
           <View style={styles.card}>
             <View style={{flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15}}>
                 <Text style={styles.cardTitle}>🔌 Connected APIs</Text>
-                <TouchableOpacity onPress={() => setIsAddingApi(!isAddingApi)}>
-                  <Text style={{color: COLORS.cloud, fontSize: 24, fontWeight: 'bold'}}>{isAddingApi ? "✖" : "➕"}</Text>
-                </TouchableOpacity>
+                <TouchableOpacity onPress={() => setIsAddingApi(!isAddingApi)}><Text style={{color: COLORS.cloud, fontSize: 24, fontWeight: 'bold'}}>{isAddingApi ? "✖" : "➕"}</Text></TouchableOpacity>
             </View>
             {isAddingApi && (
               <View style={{marginBottom: 20, padding: 15, backgroundColor: COLORS.background, borderRadius: 8, borderWidth: 1, borderColor: COLORS.cloud}}>
                 <TextInput style={styles.keyInput} placeholder="AIza..., sk-..., tvly-..." placeholderTextColor={COLORS.textMuted} value={inputKey} onChangeText={setInputKey} secureTextEntry />
-                <TouchableOpacity style={[styles.actionBtn, {backgroundColor: COLORS.cloud, marginTop: 10}]} onPress={saveNewConnection}>
-                  <Text style={styles.actionBtnText}>Save</Text>
-                </TouchableOpacity>
+                <TouchableOpacity style={[styles.actionBtn, {backgroundColor: COLORS.cloud, marginTop: 10}]} onPress={saveNewConnection}><Text style={styles.actionBtnText}>Save</Text></TouchableOpacity>
               </View>
             )}
             
@@ -295,25 +308,11 @@ export default function App() {
                 <View key={conn.id} style={{flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: COLORS.background, padding: 12, borderRadius: 8, marginVertical: 5, borderWidth: 1, borderColor: activeEngineId === conn.id ? conn.color : COLORS.border}}>
                     <View style={{flexDirection: 'row', alignItems: 'center'}}>
                         <TouchableOpacity onPress={() => makeActiveEngine(conn.id)} style={{marginRight: 10}}>
-                            <View style={{width: 20, height: 20, borderRadius: 10, borderWidth: 2, borderColor: conn.color, justifyContent: 'center', alignItems: 'center'}}>
-                              {activeEngineId === conn.id && <View style={{width: 10, height: 10, borderRadius: 5, backgroundColor: conn.color}} />}
-                            </View>
+                            <View style={{width: 20, height: 20, borderRadius: 10, borderWidth: 2, borderColor: conn.color, justifyContent: 'center', alignItems: 'center'}}>{activeEngineId === conn.id && <View style={{width: 10, height: 10, borderRadius: 5, backgroundColor: conn.color}} />}</View>
                         </TouchableOpacity>
                         <Text style={{color: COLORS.textMain, fontWeight: 'bold'}}>{conn.provider}</Text>
                     </View>
-                    <TouchableOpacity onPress={() => deleteConnection(conn.id)}>
-                      <Text style={{color: COLORS.danger}}>🗑️</Text>
-                    </TouchableOpacity>
-                </View>
-            ))}
-            
-            <Text style={{color: COLORS.textMuted, fontWeight: 'bold', marginTop: 15}}>🛠️ TOOLS (Skills)</Text>
-            {connections.filter(c => c.type === 'tool').map((conn) => (
-                <View key={conn.id} style={{flexDirection: 'row', justifyContent: 'space-between', padding: 12, borderRadius: 8, marginVertical: 5, borderWidth: 1, borderColor: conn.color}}>
-                    <Text style={{color: COLORS.textMain, fontWeight: 'bold'}}>🔎 {conn.provider}</Text>
-                    <TouchableOpacity onPress={() => deleteConnection(conn.id)}>
-                      <Text style={{color: COLORS.danger}}>🗑️</Text>
-                    </TouchableOpacity>
+                    <TouchableOpacity onPress={() => deleteConnection(conn.id)}><Text style={{color: COLORS.danger}}>🗑️</Text></TouchableOpacity>
                 </View>
             ))}
           </View>
@@ -321,15 +320,9 @@ export default function App() {
       )}
 
       <View style={styles.bottomNav}>
-        <TouchableOpacity style={styles.navItem} onPress={() => setActiveTab("CHAT")}>
-          <Text style={styles.navIcon}>💬</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.navItem} onPress={() => setActiveTab("KHAZANA")}>
-          <Text style={styles.navIcon}>📁</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.navItem} onPress={() => setActiveTab("SETTINGS")}>
-          <Text style={styles.navIcon}>⚙️</Text>
-        </TouchableOpacity>
+        <TouchableOpacity style={styles.navItem} onPress={() => setActiveTab("CHAT")}><Text style={styles.navIcon}>💬</Text></TouchableOpacity>
+        <TouchableOpacity style={styles.navItem} onPress={() => setActiveTab("KHAZANA")}><Text style={styles.navIcon}>📁</Text></TouchableOpacity>
+        <TouchableOpacity style={styles.navItem} onPress={() => setActiveTab("SETTINGS")}><Text style={styles.navIcon}>⚙️</Text></TouchableOpacity>
       </View>
     </SafeAreaView>
   );
@@ -364,4 +357,4 @@ const styles = StyleSheet.create({
   navItem: { flex: 1, alignItems: "center", justifyContent: "center" },
   navIcon: { fontSize: 22, marginBottom: 4 }
 });
-  
+      
