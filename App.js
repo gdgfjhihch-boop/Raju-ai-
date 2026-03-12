@@ -1,7 +1,6 @@
 /**
  * ╔══════════════════════════════════════════════════════════════════╗
- * ║          RAJU AI — SOVEREIGN PERSONAL ASSISTANT v8.5 (FIXED)      ║
- * ║          FULLY FUNCTIONAL: Vault + Khazana + Real API/Offline   ║
+ * ║          RAJU AI — SOVEREIGN PERSONAL ASSISTANT v8.5            ║
  * ╚══════════════════════════════════════════════════════════════════╝
  */
 
@@ -40,7 +39,9 @@ export default function App() {
   const [isModelLoaded, setIsModelLoaded] = useState(false);
   const [modelExists, setModelExists] = useState(false);
   
-  const [messages, setMessages] = useState([{ id: "1", role: "ai", text: "Namaste Raju Bhai! App ka syntax error fix ho gaya hai. Ab sab kuch ASLI chal raha hai!" }]);
+  const [messages, setMessages] = useState([
+    { id: "1", role: "ai", text: "Namaste Raju Bhai! App ka code successfully update ho gaya hai. Test kijiye!" }
+  ]);
   const [input, setInput] = useState("");
   const [isThinking, setIsThinking] = useState(false);
   const scrollRef = useRef(null);
@@ -60,10 +61,11 @@ export default function App() {
     setModelExists(info.exists); 
   };
 
-  // ─── 📁 KHAZANA (FILE MANAGER) LOGIC ───
   const initKhazana = async () => {
     const dirInfo = await FileSystem.getInfoAsync(KHAZANA_DIR);
-    if (!dirInfo.exists) await FileSystem.makeDirectoryAsync(KHAZANA_DIR, { intermediates: true });
+    if (!dirInfo.exists) {
+      await FileSystem.makeDirectoryAsync(KHAZANA_DIR, { intermediates: true });
+    }
     loadKhazanaFiles();
   };
 
@@ -71,38 +73,32 @@ export default function App() {
     try { 
       const files = await FileSystem.readDirectoryAsync(KHAZANA_DIR); 
       setKhazanaItems(files); 
-    } catch (e) { 
-      console.log(e); 
-    }
+    } catch (e) { console.log("Khazana error:", e); }
   };
 
   const createFolderManually = async () => {
     if(!newFolderName.trim()) return;
     await FileSystem.makeDirectoryAsync(KHAZANA_DIR + newFolderName.trim() + "/", { intermediates: true });
-    setNewFolderName(""); 
-    loadKhazanaFiles(); 
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    setNewFolderName(""); loadKhazanaFiles(); Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
   };
 
   const deleteKhazanaItem = async (itemName) => {
     Alert.alert("Delete?", `${itemName} ko hamesha ke liye delete karein?`, [
       { text: "Cancel", style: "cancel" }, 
       { text: "Delete", style: "destructive", onPress: async () => { 
-          await FileSystem.deleteAsync(KHAZANA_DIR + itemName, { idempotent: true }); 
-          loadKhazanaFiles(); 
+          await FileSystem.deleteAsync(KHAZANA_DIR + itemName, { idempotent: true }); loadKhazanaFiles(); 
         }
       }
     ]);
   };
 
-  // ─── 🔑 API CONNECTIONS LOGIC ───
   const loadConnections = async () => { 
     try {
       const savedConns = await SecureStore.getItemAsync(SECURE_CONNECTIONS);
       const savedActive = await SecureStore.getItemAsync(SECURE_ACTIVE_ENGINE);
       if (savedConns) setConnections(JSON.parse(savedConns));
       if (savedActive) setActiveEngineId(savedActive);
-    } catch(e) {}
+    } catch(e) { console.log("Connection load error:", e); }
   };
 
   const saveNewConnection = async () => {
@@ -121,55 +117,36 @@ export default function App() {
     const updatedConns = [...connections, newConn];
     await SecureStore.setItemAsync(SECURE_CONNECTIONS, JSON.stringify(updatedConns));
     setConnections(updatedConns);
-    
-    if (type === "engine" && !activeEngineId) { 
-      setActiveEngineId(newConn.id); 
-      await SecureStore.setItemAsync(SECURE_ACTIVE_ENGINE, newConn.id); 
-    }
-    setInputKey(""); 
-    setIsAddingApi(false);
+    if (type === "engine" && !activeEngineId) { setActiveEngineId(newConn.id); await SecureStore.setItemAsync(SECURE_ACTIVE_ENGINE, newConn.id); }
+    setInputKey(""); setIsAddingApi(false);
   };
 
   const deleteConnection = async (id) => {
     const updated = connections.filter(c => c.id !== id);
     await SecureStore.setItemAsync(SECURE_CONNECTIONS, JSON.stringify(updated));
     setConnections(updated);
-    if (activeEngineId === id) { 
-      setActiveEngineId(null); 
-      await SecureStore.deleteItemAsync(SECURE_ACTIVE_ENGINE); 
-    }
+    if (activeEngineId === id) { setActiveEngineId(null); await SecureStore.deleteItemAsync(SECURE_ACTIVE_ENGINE); }
   };
 
   const makeActiveEngine = async (id) => {
-    setActiveEngineId(id); 
-    await SecureStore.setItemAsync(SECURE_ACTIVE_ENGINE, id); 
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setActiveEngineId(id); await SecureStore.setItemAsync(SECURE_ACTIVE_ENGINE, id); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
   };
 
-  // ─── 🧠 ASLI OFFLINE MODEL LOADER ───
   const loadOfflineModel = async () => {
     try { 
       setIsThinking(true); 
       const context = await initLlama({ model: modelPath, use_mlock: true, n_ctx: 1024 }); 
-      setLlamaContext(context); 
-      setIsModelLoaded(true); 
-      setUseCloud(false); 
-      setActiveTab("CHAT");
-    } catch (e) { 
-      alert("Load Error: " + e.message); 
-    }
+      setLlamaContext(context); setIsModelLoaded(true); setUseCloud(false); setActiveTab("CHAT");
+    } catch (e) { alert("Load Error: " + e.message); }
     setIsThinking(false);
   };
 
-  // ─── 💬 THE REAL CHAT ROUTER ───
   const sendMessage = async () => {
     if (!input.trim()) return;
     const userText = input.trim();
     setMessages(prev => [...prev, { id: Date.now().toString(), role: "user", text: userText }]);
-    setInput(""); 
-    setIsThinking(true);
+    setInput(""); setIsThinking(true);
 
-    // 1. Agentic Khazana Intercept
     const lowerText = userText.toLowerCase();
     if (lowerText.startsWith("folder banao:")) {
       const folderName = userText.split(":")[1].trim();
@@ -191,15 +168,9 @@ export default function App() {
       }
     }
 
-    // 2. Cloud (API) Routing
     if (useCloud) {
       let activeConn = connections.find(c => c.id === activeEngineId);
-      if (!activeConn) { 
-        setMessages(prev => [...prev, { id: Date.now().toString(), role: "ai", text: "⚠️ Koi Active Engine select nahi kiya hai Settings mein." }]); 
-        setIsThinking(false); 
-        return; 
-      }
-      
+      if (!activeConn) { setMessages(prev => [...prev, { id: Date.now().toString(), role: "ai", text: "⚠️ Koi Active Engine select nahi kiya hai." }]); setIsThinking(false); return; }
       try {
         let aiResponseText = "";
         if (activeConn.provider === "Gemini") {
@@ -216,40 +187,25 @@ export default function App() {
           const data = await response.json();
           if (data.error) throw new Error(data.error.message);
           aiResponseText = data.choices[0].message.content;
-        } else { 
-          aiResponseText = "⚠️ Ye engine abhi chat ke liye configure nahi hai."; 
-        }
-        
+        } else { aiResponseText = "⚠️ Ye engine abhi chat ke liye configure nahi hai."; }
         setMessages(prev => [...prev, { id: Date.now().toString(), role: "ai", text: aiResponseText, routerStatus: `☁️ ${activeConn.provider}` }]);
-      } catch (error) { 
-        setMessages(prev => [...prev, { id: Date.now().toString(), role: "ai", text: `❌ API Error: ` + error.message }]); 
-      }
-    } 
-    // 3. Offline Llama Routing
-    else {
-      if (!isModelLoaded || !llamaContext) { 
-        setMessages(prev => [...prev, { id: Date.now().toString(), role: "ai", text: "⚠️ Offline Model start nahi hua hai. Settings se start karein." }]); 
-        setIsThinking(false); 
-        return; 
-      }
+      } catch (error) { setMessages(prev => [...prev, { id: Date.now().toString(), role: "ai", text: `❌ API Error: ` + error.message }]); }
+    } else {
+      if (!isModelLoaded || !llamaContext) { setMessages(prev => [...prev, { id: Date.now().toString(), role: "ai", text: "⚠️ Offline Model start nahi hua hai." }]); setIsThinking(false); return; }
       try {
         const result = await llamaContext.completion({ prompt: `<|system|>\nYou are Raju AI. Keep answers short.\n</s>\n<|user|>\n${userText}</s>\n<|assistant|>\n`, n_predict: 150 });
         setMessages(prev => [...prev, { id: Date.now().toString(), role: "ai", text: result.text.trim(), routerStatus: "🧠 Offline Llama" }]);
-      } catch (error) { 
-        setMessages(prev => [...prev, { id: Date.now().toString(), role: "ai", text: "❌ Offline Error: " + error.message }]); 
-      }
+      } catch (error) { setMessages(prev => [...prev, { id: Date.now().toString(), role: "ai", text: "❌ Offline Error: " + error.message }]); }
     }
     setIsThinking(false);
   };
-
-  return (
+        return (
     <SafeAreaView style={styles.root}>
       <StatusBar barStyle="light-content" backgroundColor={COLORS.surface} />
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Raju AI</Text>
       </View>
 
-      {/* 💬 CHAT TAB */}
       {activeTab === "CHAT" && (
         <View style={styles.screenContainer}>
           <View style={styles.switchContainer}>
@@ -277,7 +233,6 @@ export default function App() {
         </View>
       )}
 
-      {/* 📁 KHAZANA TAB */}
       {activeTab === "KHAZANA" && (
         <ScrollView style={styles.screenPadding}>
           <Text style={styles.sectionTitle}>📁 Mera Khazana</Text>
@@ -285,7 +240,9 @@ export default function App() {
              <Text style={styles.cardTitle}>➕ Create Manually</Text>
              <View style={{flexDirection: 'row', alignItems: 'center'}}>
                 <TextInput style={[styles.keyInput, {flex: 1, marginRight: 10}]} placeholder="Folder Name..." placeholderTextColor={COLORS.textMuted} value={newFolderName} onChangeText={setNewFolderName} />
-                <TouchableOpacity style={[styles.actionBtn, {backgroundColor: COLORS.folder, paddingHorizontal: 15}]} onPress={createFolderManually}><Text style={{color: '#000', fontWeight: 'bold'}}>Create</Text></TouchableOpacity>
+                <TouchableOpacity style={[styles.actionBtn, {backgroundColor: COLORS.folder, paddingHorizontal: 15}]} onPress={createFolderManually}>
+                  <Text style={{color: '#000', fontWeight: 'bold'}}>Create</Text>
+                </TouchableOpacity>
              </View>
           </View>
           <View style={styles.card}>
@@ -293,19 +250,19 @@ export default function App() {
              {khazanaItems.length === 0 ? <Text style={{color: COLORS.textMuted}}>Khazana khali hai.</Text> : khazanaItems.map((item, index) => (
                  <View key={index} style={{flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 12, borderBottomWidth: 1, borderColor: COLORS.border}}>
                      <Text style={{color: COLORS.textMain, fontSize: 16}}>{item.includes('.txt') ? '📄' : '📁'} {item}</Text>
-                     <TouchableOpacity onPress={() => deleteKhazanaItem(item)}><Text style={{color: COLORS.danger}}>🗑️</Text></TouchableOpacity>
+                     <TouchableOpacity onPress={() => deleteKhazanaItem(item)}>
+                       <Text style={{color: COLORS.danger}}>🗑️</Text>
+                     </TouchableOpacity>
                  </View>
              ))}
           </View>
         </ScrollView>
       )}
 
-      {/* ⚙️ SETTINGS TAB */}
       {activeTab === "SETTINGS" && (
         <ScrollView style={styles.screenPadding}>
           <Text style={styles.sectionTitle}>⚙️ Settings & Vault</Text>
           
-          {/* OFFLINE MODEL SECTION */}
           <View style={[styles.card, {marginBottom: 20}]}>
             <Text style={styles.cardTitle}>🧠 Offline Local Engine</Text>
             {!modelExists ? ( <Text style={{color: COLORS.textMuted}}>Model not found on device.</Text> ) : (
@@ -317,16 +274,19 @@ export default function App() {
             )}
           </View>
 
-          {/* MULTI API VAULT */}
           <View style={styles.card}>
             <View style={{flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15}}>
                 <Text style={styles.cardTitle}>🔌 Connected APIs</Text>
-                <TouchableOpacity onPress={() => setIsAddingApi(!isAddingApi)}><Text style={{color: COLORS.cloud, fontSize: 24, fontWeight: 'bold'}}>{isAddingApi ? "✖" : "➕"}</Text></TouchableOpacity>
+                <TouchableOpacity onPress={() => setIsAddingApi(!isAddingApi)}>
+                  <Text style={{color: COLORS.cloud, fontSize: 24, fontWeight: 'bold'}}>{isAddingApi ? "✖" : "➕"}</Text>
+                </TouchableOpacity>
             </View>
             {isAddingApi && (
               <View style={{marginBottom: 20, padding: 15, backgroundColor: COLORS.background, borderRadius: 8, borderWidth: 1, borderColor: COLORS.cloud}}>
                 <TextInput style={styles.keyInput} placeholder="AIza..., sk-..., tvly-..." placeholderTextColor={COLORS.textMuted} value={inputKey} onChangeText={setInputKey} secureTextEntry />
-                <TouchableOpacity style={[styles.actionBtn, {backgroundColor: COLORS.cloud, marginTop: 10}]} onPress={saveNewConnection}><Text style={styles.actionBtnText}>Save</Text></TouchableOpacity>
+                <TouchableOpacity style={[styles.actionBtn, {backgroundColor: COLORS.cloud, marginTop: 10}]} onPress={saveNewConnection}>
+                  <Text style={styles.actionBtnText}>Save</Text>
+                </TouchableOpacity>
               </View>
             )}
             
@@ -335,11 +295,15 @@ export default function App() {
                 <View key={conn.id} style={{flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: COLORS.background, padding: 12, borderRadius: 8, marginVertical: 5, borderWidth: 1, borderColor: activeEngineId === conn.id ? conn.color : COLORS.border}}>
                     <View style={{flexDirection: 'row', alignItems: 'center'}}>
                         <TouchableOpacity onPress={() => makeActiveEngine(conn.id)} style={{marginRight: 10}}>
-                            <View style={{width: 20, height: 20, borderRadius: 10, borderWidth: 2, borderColor: conn.color, justifyContent: 'center', alignItems: 'center'}}>{activeEngineId === conn.id && <View style={{width: 10, height: 10, borderRadius: 5, backgroundColor: conn.color}} />}</View>
+                            <View style={{width: 20, height: 20, borderRadius: 10, borderWidth: 2, borderColor: conn.color, justifyContent: 'center', alignItems: 'center'}}>
+                              {activeEngineId === conn.id && <View style={{width: 10, height: 10, borderRadius: 5, backgroundColor: conn.color}} />}
+                            </View>
                         </TouchableOpacity>
                         <Text style={{color: COLORS.textMain, fontWeight: 'bold'}}>{conn.provider}</Text>
                     </View>
-                    <TouchableOpacity onPress={() => deleteConnection(conn.id)}><Text style={{color: COLORS.danger}}>🗑️</Text></TouchableOpacity>
+                    <TouchableOpacity onPress={() => deleteConnection(conn.id)}>
+                      <Text style={{color: COLORS.danger}}>🗑️</Text>
+                    </TouchableOpacity>
                 </View>
             ))}
             
@@ -347,33 +311,57 @@ export default function App() {
             {connections.filter(c => c.type === 'tool').map((conn) => (
                 <View key={conn.id} style={{flexDirection: 'row', justifyContent: 'space-between', padding: 12, borderRadius: 8, marginVertical: 5, borderWidth: 1, borderColor: conn.color}}>
                     <Text style={{color: COLORS.textMain, fontWeight: 'bold'}}>🔎 {conn.provider}</Text>
-                    <TouchableOpacity onPress={() => deleteConnection(conn.id)}><Text style={{color: COLORS.danger}}>🗑️</Text></TouchableOpacity>
+                    <TouchableOpacity onPress={() => deleteConnection(conn.id)}>
+                      <Text style={{color: COLORS.danger}}>🗑️</Text>
+                    </TouchableOpacity>
                 </View>
             ))}
           </View>
         </ScrollView>
       )}
 
-      {/* BOTTOM NAV */}
       <View style={styles.bottomNav}>
-        <TouchableOpacity style={styles.navItem} onPress={() => setActiveTab("CHAT")}><Text style={styles.navIcon}>💬</Text></TouchableOpacity>
-        <TouchableOpacity style={styles.navItem} onPress={() => setActiveTab("KHAZANA")}><Text style={styles.navIcon}>📁</Text></TouchableOpacity>
-        <TouchableOpacity style={styles.navItem} onPress={() => setActiveTab("SETTINGS")}><Text style={styles.navIcon}>⚙️</Text></TouchableOpacity>
+        <TouchableOpacity style={styles.navItem} onPress={() => setActiveTab("CHAT")}>
+          <Text style={styles.navIcon}>💬</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.navItem} onPress={() => setActiveTab("KHAZANA")}>
+          <Text style={styles.navIcon}>📁</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.navItem} onPress={() => setActiveTab("SETTINGS")}>
+          <Text style={styles.navIcon}>⚙️</Text>
+        </TouchableOpacity>
       </View>
     </SafeAreaView>
   );
 }
 
-// ─── STYLES (Fixes the Syntax Error) ───
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: COLORS.background },
   header: { padding: 15, backgroundColor: COLORS.surface, flexDirection: "row", justifyContent: "space-between", alignItems: "center", borderBottomWidth: 1, borderColor: COLORS.border },
-  headerTitle: { color: COLORS.textMain, fontSize: 20, fontWeight: 'bold' },
+  headerTitle: { color: COLORS.textMain, fontSize: 20, fontWeight: "bold" },
   screenContainer: { flex: 1 },
   screenPadding: { flex: 1, padding: 20 },
-  sectionTitle: { color: COLORS.textMain, fontSize: 24, fontWeight: 'bold', marginBottom: 5 },
+  sectionTitle: { color: COLORS.textMain, fontSize: 24, fontWeight: "bold", marginBottom: 5 },
   card: { backgroundColor: COLORS.surface, padding: 20, borderRadius: 12, borderWidth: 1, borderColor: COLORS.border },
-  cardTitle: { color: COLORS.textMain, fontSize: 18, fontWeight: 'bold', marginBottom: 10 },
-  actionBtn: { padding: 12, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
-  actionBtnText: { color: '#fff', fontSize: 16, fontWeight: 'bold' },
-  keyInput: { backgroundColor: COLORS.back
+  cardTitle: { color: COLORS.textMain, fontSize: 18, fontWeight: "bold", marginBottom: 10 },
+  actionBtn: { padding: 12, borderRadius: 8, alignItems: "center", justifyContent: "center" },
+  actionBtnText: { color: "#fff", fontSize: 16, fontWeight: "bold" },
+  keyInput: { backgroundColor: COLORS.background, color: COLORS.textMain, borderWidth: 1, borderColor: COLORS.border, borderRadius: 8, padding: 12, fontSize: 16 },
+  switchContainer: { flexDirection: "row", justifyContent: "center", alignItems: "center", padding: 10, backgroundColor: COLORS.surface, borderBottomWidth: 1, borderColor: COLORS.border, gap: 10 },
+  chatScrollArea: { padding: 15, paddingBottom: 20 },
+  messageRow: { marginBottom: 15, flexDirection: "row" },
+  messageRowUser: { justifyContent: "flex-end" },
+  messageRowAI: { justifyContent: "flex-start" },
+  bubble: { maxWidth: "85%", padding: 14, borderRadius: 16 },
+  bubbleUser: { backgroundColor: COLORS.surface, borderWidth: 1, borderColor: COLORS.border, borderBottomRightRadius: 4 },
+  bubbleAI: { backgroundColor: "transparent", borderBottomLeftRadius: 4 },
+  messageText: { color: COLORS.textMain, fontSize: 16, lineHeight: 22 },
+  inputContainer: { flexDirection: "row", padding: 12, backgroundColor: COLORS.surface, alignItems: "flex-end", borderTopWidth: 1, borderColor: COLORS.border },
+  textInput: { flex: 1, backgroundColor: COLORS.background, color: COLORS.textMain, fontSize: 16, minHeight: 48, maxHeight: 120, borderRadius: 24, paddingHorizontal: 16, paddingTop: 12, paddingBottom: 12, marginRight: 10, borderWidth: 1, borderColor: COLORS.border },
+  sendButton: { width: 48, height: 48, borderRadius: 24, justifyContent: "center", alignItems: "center", backgroundColor: COLORS.primary },
+  sendIcon: { color: COLORS.textMain, fontSize: 20, marginLeft: 2 },
+  bottomNav: { flexDirection: "row", backgroundColor: COLORS.surface, borderTopWidth: 1, borderColor: COLORS.border, paddingBottom: Platform.OS === "ios" ? 20 : 10, paddingTop: 10 },
+  navItem: { flex: 1, alignItems: "center", justifyContent: "center" },
+  navIcon: { fontSize: 22, marginBottom: 4 }
+});
+  
