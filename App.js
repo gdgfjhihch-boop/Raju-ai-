@@ -1,7 +1,7 @@
 /**
  * ╔══════════════════════════════════════════════════════════════════╗
- * ║          RAJU AI — SOVEREIGN PERSONAL ASSISTANT v8.8            ║
- * ║          NEW: LIVE INTERNET SEARCH (TAVILY API INTEGRATION)     ║
+ * ║          RAJU AI — SOVEREIGN PERSONAL ASSISTANT v8.9            ║
+ * ║          SMART FOLDERS (SEASONS), NAVIGATION & CUSTOM MODELS    ║
  * ╚══════════════════════════════════════════════════════════════════╝
  */
 
@@ -23,13 +23,13 @@ const COLORS = {
 };
 
 const OFFLINE_MODELS = [
-  { id: "qwen", name: "Qwen 1.8B (Smart - 1.2GB)", file: "qwen1.8b.gguf", url: "https://huggingface.co/Qwen/Qwen1.5-1.8B-Chat-GGUF/resolve/main/qwen1_5-1_8b-chat-q4_k_m.gguf" },
-  { id: "tiny", name: "TinyLlama (Fast - 600MB)", file: "tinyllama.gguf", url: "https://huggingface.co/TheBloke/TinyLlama-1.1B-Chat-v1.0-GGUF/resolve/main/tinyllama-1.1b-chat-v1.0.Q2_K.gguf" }
+  { id: "qwen", name: "Qwen 1.8B", file: "qwen1.8b.gguf", url: "https://huggingface.co/Qwen/Qwen1.5-1.8B-Chat-GGUF/resolve/main/qwen1_5-1_8b-chat-q4_k_m.gguf" },
+  { id: "tiny", name: "TinyLlama", file: "tinyllama.gguf", url: "https://huggingface.co/TheBloke/TinyLlama-1.1B-Chat-v1.0-GGUF/resolve/main/tinyllama-1.1b-chat-v1.0.Q2_K.gguf" }
 ];
 
 const SECURE_CONNECTIONS = "raju_api_connections"; 
 const SECURE_ACTIVE_ENGINE = "raju_active_engine";
-const KHAZANA_DIR = FileSystem.documentDirectory + "Raju_Khazana/";
+const KHAZANA_ROOT = FileSystem.documentDirectory + "Raju_Khazana/";
 
 export default function App() {
   const [activeTab, setActiveTab] = useState("CHAT"); 
@@ -42,6 +42,7 @@ export default function App() {
   const [isAddingApi, setIsAddingApi] = useState(false); 
   
   const [selectedOfflineModel, setSelectedOfflineModel] = useState(OFFLINE_MODELS[0]);
+  const [customModelUrl, setCustomModelUrl] = useState("");
   const [llamaContext, setLlamaContext] = useState(null);
   const [isModelLoaded, setIsModelLoaded] = useState(false);
   const [modelExists, setModelExists] = useState(false);
@@ -49,13 +50,15 @@ export default function App() {
   const [downloadProgress, setDownloadProgress] = useState(0);
   
   const [messages, setMessages] = useState([
-    { id: "1", role: "ai", text: "Namaste Raju Bhai! Ab main Internet Search bhi kar sakta hu. Type karein: 'Search: Aaj ki news'" }
+    { id: "1", role: "ai", text: "Namaste Raju Bhai! Ab main Folders ke andar sub-folders (Seasons) bana sakta hu aur aap Custom Model link bhi daal sakte hain!" }
   ]);
   const [input, setInput] = useState("");
   const [isThinking, setIsThinking] = useState(false);
   const scrollRef = useRef(null);
 
+  // Khazana State
   const [khazanaItems, setKhazanaItems] = useState([]);
+  const [currentPath, setCurrentPath] = useState(KHAZANA_ROOT);
   const [newFolderName, setNewFolderName] = useState("");
 
   const getModelPath = (filename) => FileSystem.documentDirectory + filename;
@@ -79,11 +82,12 @@ export default function App() {
     setModelExists(info.exists); 
   };
 
-  const downloadModel = async () => {
+  const downloadModel = async (urlToDownload, fileName) => {
+    if(!urlToDownload) return;
     setIsDownloading(true);
     try {
       const downloadResumable = FileSystem.createDownloadResumable(
-        selectedOfflineModel.url, getModelPath(selectedOfflineModel.file), {},
+        urlToDownload, getModelPath(fileName), {},
         (progressInfo) => {
           const progress = progressInfo.totalBytesWritten / progressInfo.totalBytesExpectedToWrite;
           setDownloadProgress(Math.round(progress * 100));
@@ -91,34 +95,54 @@ export default function App() {
       );
       await downloadResumable.downloadAsync();
       setModelExists(true);
+      setCustomModelUrl("");
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     } catch (e) { alert("Download failed: " + e.message); }
     setIsDownloading(false); setDownloadProgress(0);
   };
 
+  // ─── 📁 KHAZANA (SMART FILE MANAGER) ───
   const initKhazana = async () => {
-    const dirInfo = await FileSystem.getInfoAsync(KHAZANA_DIR);
-    if (!dirInfo.exists) await FileSystem.makeDirectoryAsync(KHAZANA_DIR, { intermediates: true });
-    loadKhazanaFiles();
+    const dirInfo = await FileSystem.getInfoAsync(KHAZANA_ROOT);
+    if (!dirInfo.exists) await FileSystem.makeDirectoryAsync(KHAZANA_ROOT, { intermediates: true });
+    loadKhazanaFiles(KHAZANA_ROOT);
   };
 
-  const loadKhazanaFiles = async () => {
-    try { const files = await FileSystem.readDirectoryAsync(KHAZANA_DIR); setKhazanaItems(files); } catch (e) {}
+  const loadKhazanaFiles = async (path) => {
+    try { const files = await FileSystem.readDirectoryAsync(path); setKhazanaItems(files); setCurrentPath(path); } catch (e) {}
+  };
+
+  const handleKhazanaItemClick = async (item) => {
+    const isFile = item.includes('.');
+    if (!isFile) {
+      loadKhazanaFiles(currentPath + item + "/");
+    } else {
+      alert("File Viewer abhi aana baaki hai. Ye file hai: " + item);
+    }
+  };
+
+  const goBackKhazana = () => {
+    if (currentPath === KHAZANA_ROOT) return;
+    let pathArray = currentPath.split("/");
+    pathArray.splice(-2, 1); // Remove current folder
+    const newPath = pathArray.join("/");
+    loadKhazanaFiles(newPath);
   };
 
   const createFolderManually = async () => {
     if(!newFolderName.trim()) return;
-    await FileSystem.makeDirectoryAsync(KHAZANA_DIR + newFolderName.trim() + "/", { intermediates: true });
-    setNewFolderName(""); loadKhazanaFiles(); Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    await FileSystem.makeDirectoryAsync(currentPath + newFolderName.trim() + "/", { intermediates: true });
+    setNewFolderName(""); loadKhazanaFiles(currentPath); Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
   };
 
   const deleteKhazanaItem = async (itemName) => {
     Alert.alert("Delete?", `${itemName} ko delete karein?`, [
       { text: "Cancel", style: "cancel" }, 
-      { text: "Delete", style: "destructive", onPress: async () => { await FileSystem.deleteAsync(KHAZANA_DIR + itemName, { idempotent: true }); loadKhazanaFiles(); } }
+      { text: "Delete", style: "destructive", onPress: async () => { await FileSystem.deleteAsync(currentPath + itemName, { idempotent: true }); loadKhazanaFiles(currentPath); } }
     ]);
   };
 
+  // ─── 🔑 API CONNECTIONS LOGIC ───
   const loadConnections = async () => { 
     try {
       const savedConns = await SecureStore.getItemAsync(SECURE_CONNECTIONS);
@@ -173,13 +197,13 @@ export default function App() {
 
     const lowerText = userText.toLowerCase();
 
-    // 🌐 1. TAVILY INTERNET SEARCH INTERCEPT
+    // 🌐 1. TAVILY INTERNET SEARCH
     if (lowerText.startsWith("search:") || lowerText.startsWith("net:")) {
       const query = userText.substring(userText.indexOf(":") + 1).trim();
       let tavilyConn = connections.find(c => c.provider === "Tavily Search");
 
       if (!tavilyConn) {
-        setMessages(prev => [...prev, { id: Date.now().toString(), role: "ai", text: "⚠️ Settings mein pehle Tavily API Key (tvly-...) add karein." }]);
+        setMessages(prev => [...prev, { id: Date.now().toString(), role: "ai", text: "⚠️ Settings mein pehle Tavily API Key add karein." }]);
         setIsThinking(false); return;
       }
 
@@ -189,42 +213,41 @@ export default function App() {
           body: JSON.stringify({ api_key: tavilyConn.key, query: query, include_answer: true })
         });
         const searchData = await searchRes.json();
-        
-        // Extract best answer
-        let finalAnswer = searchData.answer;
-        if (!finalAnswer && searchData.results && searchData.results.length > 0) {
-           finalAnswer = searchData.results[0].content;
-        }
-
+        let finalAnswer = searchData.answer || (searchData.results && searchData.results[0]?.content);
         setMessages(prev => [...prev, { id: Date.now().toString(), role: "ai", text: `🌐 Search Result:\n\n${finalAnswer || "Kuch nahi mila."}`, routerStatus: "🔎 Tavily Internet" }]);
-      } catch (err) {
-         setMessages(prev => [...prev, { id: Date.now().toString(), role: "ai", text: `❌ Search Error: ${err.message}` }]);
-      }
+      } catch (err) { setMessages(prev => [...prev, { id: Date.now().toString(), role: "ai", text: `❌ Search Error: ${err.message}` }]); }
       setIsThinking(false); return;
     }
 
-    // 📁 2. LOCAL KHAZANA INTERCEPTS
-    if (lowerText.startsWith("folder banao:")) {
-      const folderName = userText.split(":")[1].trim();
-      if(folderName) {
-         await FileSystem.makeDirectoryAsync(KHAZANA_DIR + folderName + "/", { intermediates: true });
-         loadKhazanaFiles();
-         setMessages(prev => [...prev, { id: Date.now().toString(), role: "ai", text: `📁 Done! '${folderName}' folder ban gaya.`, routerStatus: "🛠️ Local System" }]);
-         setIsThinking(false); return;
-      }
-    }
-    if (lowerText.startsWith("note likho:")) {
+    // 📁 2. SMART KHAZANA (Web Series Style Folders)
+    // Command format: "Save: Share Market/Season 1/Episode 1 | Content here"
+    if (lowerText.startsWith("save:") || lowerText.startsWith("note likho:")) {
+      const splitChar = lowerText.startsWith("save:") ? "save:" : "note likho:";
       const parts = userText.split("|");
+      
       if(parts.length >= 2) {
-         const fileName = parts[0].replace("note likho:", "").trim() + ".txt";
-         await FileSystem.writeAsStringAsync(KHAZANA_DIR + fileName, parts[1].trim());
-         loadKhazanaFiles();
-         setMessages(prev => [...prev, { id: Date.now().toString(), role: "ai", text: `📝 Done! '${fileName}' save ho gai.`, routerStatus: "🛠️ Local System" }]);
+         let pathInfo = parts[0].substring(parts[0].toLowerCase().indexOf(splitChar) + splitChar.length).trim();
+         const content = parts.slice(1).join("|").trim();
+         
+         const isNested = pathInfo.includes("/");
+         const folderStructure = isNested ? pathInfo.substring(0, pathInfo.lastIndexOf("/")) + "/" : "";
+         const fileName = (isNested ? pathInfo.substring(pathInfo.lastIndexOf("/") + 1) : pathInfo) + ".txt";
+
+         try {
+           if(folderStructure) {
+             await FileSystem.makeDirectoryAsync(KHAZANA_ROOT + folderStructure, { intermediates: true });
+           }
+           await FileSystem.writeAsStringAsync(KHAZANA_ROOT + folderStructure + fileName, content);
+           loadKhazanaFiles(currentPath); // Refresh UI
+           setMessages(prev => [...prev, { id: Date.now().toString(), role: "ai", text: `📝 Done! Khazana ke [${folderStructure}] mein '${fileName}' save ho gayi.`, routerStatus: "🛠️ Local System" }]);
+         } catch(e) {
+           setMessages(prev => [...prev, { id: Date.now().toString(), role: "ai", text: `❌ Save Error: ${e.message}`, routerStatus: "🛠️ Local System" }]);
+         }
          setIsThinking(false); return;
       }
     }
 
-    // ☁️ 3. CLOUD ENGINE ROUTING
+    // ☁️ 3. CLOUD ENGINE
     if (useCloud) {
       let activeConn = connections.find(c => c.id === activeEngineId);
       if (!activeConn) { setMessages(prev => [...prev, { id: Date.now().toString(), role: "ai", text: "⚠️ Koi Active Engine select nahi kiya hai." }]); setIsThinking(false); return; }
@@ -249,12 +272,12 @@ export default function App() {
       } catch (error) { setMessages(prev => [...prev, { id: Date.now().toString(), role: "ai", text: `❌ API Error: ` + error.message }]); }
     } 
     
-    // 🧠 4. OFFLINE LLAMA ROUTING
+    // 🧠 4. OFFLINE ENGINE
     else {
       if (!isModelLoaded || !llamaContext) { setMessages(prev => [...prev, { id: Date.now().toString(), role: "ai", text: "⚠️ Offline Model start nahi hua hai." }]); setIsThinking(false); return; }
       try {
         const result = await llamaContext.completion({ prompt: `<|im_start|>system\nYou are Raju AI, a highly intelligent assistant.<|im_end|>\n<|im_start|>user\n${userText}<|im_end|>\n<|im_start|>assistant\n`, n_predict: 200 });
-        setMessages(prev => [...prev, { id: Date.now().toString(), role: "ai", text: result.text.trim(), routerStatus: `🧠 ${selectedOfflineModel.name}` }]);
+        setMessages(prev => [...prev, { id: Date.now().toString(), role: "ai", text: result.text.trim(), routerStatus: `🧠 Offline Local` }]);
       } catch (error) { setMessages(prev => [...prev, { id: Date.now().toString(), role: "ai", text: "❌ Offline Error: " + error.message }]); }
     }
     setIsThinking(false);
@@ -285,7 +308,7 @@ export default function App() {
           </ScrollView>
           <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"}>
             <View style={styles.inputContainer}>
-              <TextInput style={styles.textInput} placeholder="Message, 'Search:..', ya 'Folder banao:..'" placeholderTextColor={COLORS.textMuted} value={input} onChangeText={setInput} multiline />
+              <TextInput style={styles.textInput} placeholder="e.g. Save: Share Market/Season 1/Episode 1 | Data..." placeholderTextColor={COLORS.textMuted} value={input} onChangeText={setInput} multiline />
               <TouchableOpacity style={styles.sendButton} onPress={sendMessage} disabled={isThinking}><Text style={styles.sendIcon}>➤</Text></TouchableOpacity>
             </View>
           </KeyboardAvoidingView>
@@ -296,21 +319,36 @@ export default function App() {
       {activeTab === "KHAZANA" && (
         <ScrollView style={styles.screenPadding}>
           <Text style={styles.sectionTitle}>📁 Mera Khazana</Text>
+          
           <View style={[styles.card, {marginBottom: 20}]}>
-             <Text style={styles.cardTitle}>➕ Create Manually</Text>
+             <Text style={styles.cardTitle}>➕ Create Folder Manually</Text>
              <View style={{flexDirection: 'row', alignItems: 'center'}}>
                 <TextInput style={[styles.keyInput, {flex: 1, marginRight: 10}]} placeholder="Folder Name..." placeholderTextColor={COLORS.textMuted} value={newFolderName} onChangeText={setNewFolderName} />
                 <TouchableOpacity style={[styles.actionBtn, {backgroundColor: COLORS.folder, paddingHorizontal: 15}]} onPress={createFolderManually}><Text style={{color: '#000', fontWeight: 'bold'}}>Create</Text></TouchableOpacity>
              </View>
           </View>
+
           <View style={styles.card}>
-             <Text style={styles.cardTitle}>📂 Saved Files</Text>
-             {khazanaItems.length === 0 ? <Text style={{color: COLORS.textMuted}}>Khazana khali hai.</Text> : khazanaItems.map((item, index) => (
-                 <View key={index} style={{flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 12, borderBottomWidth: 1, borderColor: COLORS.border}}>
-                     <Text style={{color: COLORS.textMain, fontSize: 16}}>{item.includes('.txt') ? '📄' : '📁'} {item}</Text>
+             <View style={{flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10}}>
+                <Text style={styles.cardTitle}>📂 Files</Text>
+                {currentPath !== KHAZANA_ROOT && (
+                  <TouchableOpacity onPress={goBackKhazana} style={{backgroundColor: COLORS.border, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 5}}>
+                    <Text style={{color: COLORS.textMain}}>⬅️ Back</Text>
+                  </TouchableOpacity>
+                )}
+             </View>
+             
+             <Text style={{color: COLORS.warning, fontSize: 10, marginBottom: 10, fontStyle: 'italic'}}>Path: {currentPath.replace(KHAZANA_ROOT, "Root/")}</Text>
+
+             {khazanaItems.length === 0 ? <Text style={{color: COLORS.textMuted}}>Folder khali hai.</Text> : khazanaItems.map((item, index) => {
+                 const isFile = item.includes('.');
+                 return (
+                 <TouchableOpacity key={index} onPress={() => handleKhazanaItemClick(item)} style={{flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 12, borderBottomWidth: 1, borderColor: COLORS.border, alignItems: 'center'}}>
+                     <Text style={{color: isFile ? COLORS.textMain : COLORS.folder, fontSize: 16, fontWeight: isFile ? 'normal' : 'bold'}}>{isFile ? '📄' : '📁'} {item}</Text>
                      <TouchableOpacity onPress={() => deleteKhazanaItem(item)}><Text style={{color: COLORS.danger}}>🗑️</Text></TouchableOpacity>
-                 </View>
-             ))}
+                 </TouchableOpacity>
+                 );
+             })}
           </View>
         </ScrollView>
       )}
@@ -322,6 +360,8 @@ export default function App() {
           
           <View style={[styles.card, {marginBottom: 20}]}>
             <Text style={styles.cardTitle}>🧠 Offline Local Engine</Text>
+            
+            {/* Quick Presets */}
             <View style={{flexDirection: 'row', marginBottom: 15, backgroundColor: COLORS.background, borderRadius: 8}}>
               {OFFLINE_MODELS.map(model => (
                 <TouchableOpacity key={model.id} onPress={() => setSelectedOfflineModel(model)} style={{flex: 1, padding: 10, alignItems: 'center', borderBottomWidth: selectedOfflineModel.id === model.id ? 2 : 0, borderColor: COLORS.primary}}>
@@ -329,11 +369,23 @@ export default function App() {
                 </TouchableOpacity>
               ))}
             </View>
+
+            {/* Custom URL Input */}
+            <View style={{marginBottom: 15}}>
+               <Text style={{color: COLORS.textMuted, fontSize: 12, marginBottom: 5}}>Or Paste Custom HuggingFace .gguf URL:</Text>
+               <View style={{flexDirection: 'row'}}>
+                 <TextInput style={[styles.keyInput, {flex: 1, marginRight: 5}]} placeholder="https://.../model.gguf" placeholderTextColor={COLORS.textMuted} value={customModelUrl} onChangeText={setCustomModelUrl} />
+                 <TouchableOpacity style={[styles.actionBtn, {backgroundColor: customModelUrl ? COLORS.cloud : COLORS.border, paddingHorizontal: 10}]} disabled={!customModelUrl || isDownloading} onPress={() => downloadModel(customModelUrl, "custom_model.gguf")}>
+                   <Text style={{color: '#fff', fontWeight: 'bold'}}>⬇️</Text>
+                 </TouchableOpacity>
+               </View>
+            </View>
+
             {!modelExists ? (
               <View>
-                <Text style={{color: COLORS.textMuted, marginBottom: 10}}>Model not found on device.</Text>
-                <TouchableOpacity style={[styles.actionBtn, {backgroundColor: COLORS.cloud}]} onPress={downloadModel} disabled={isDownloading}>
-                  <Text style={styles.actionBtnText}>{isDownloading ? `Downloading... ${downloadProgress}%` : "⬇️ Download Model"}</Text>
+                <Text style={{color: COLORS.textMuted, marginBottom: 10}}>Default Model not found.</Text>
+                <TouchableOpacity style={[styles.actionBtn, {backgroundColor: COLORS.cloud}]} onPress={() => downloadModel(selectedOfflineModel.url, selectedOfflineModel.file)} disabled={isDownloading}>
+                  <Text style={styles.actionBtnText}>{isDownloading ? `Downloading... ${downloadProgress}%` : "⬇️ Download Presets"}</Text>
                 </TouchableOpacity>
               </View>
             ) : (
@@ -420,4 +472,4 @@ const styles = StyleSheet.create({
   navItem: { flex: 1, alignItems: "center", justifyContent: "center" },
   navIcon: { fontSize: 22, marginBottom: 4 }
 });
-  
+              
