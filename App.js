@@ -1,7 +1,7 @@
 /**
  * ╔══════════════════════════════════════════════════════════════════╗
- * ║          RAJU AI — SOVEREIGN PERSONAL ASSISTANT v8.6            ║
- * ║          FIXED: Gemini API Name + Offline Model Downloader      ║
+ * ║          RAJU AI — SOVEREIGN PERSONAL ASSISTANT v8.8            ║
+ * ║          NEW: LIVE INTERNET SEARCH (TAVILY API INTEGRATION)     ║
  * ╚══════════════════════════════════════════════════════════════════╝
  */
 
@@ -22,8 +22,11 @@ const COLORS = {
   openai: "#10A37F", tool: "#8B5CF6", folder: "#FBBF24"
 };
 
-const MODEL_URL = "https://huggingface.co/TheBloke/TinyLlama-1.1B-Chat-v1.0-GGUF/resolve/main/tinyllama-1.1b-chat-v1.0.Q2_K.gguf";
-const MODEL_FILE_NAME = "tinyllama-1.1b.gguf";
+const OFFLINE_MODELS = [
+  { id: "qwen", name: "Qwen 1.8B (Smart - 1.2GB)", file: "qwen1.8b.gguf", url: "https://huggingface.co/Qwen/Qwen1.5-1.8B-Chat-GGUF/resolve/main/qwen1_5-1_8b-chat-q4_k_m.gguf" },
+  { id: "tiny", name: "TinyLlama (Fast - 600MB)", file: "tinyllama.gguf", url: "https://huggingface.co/TheBloke/TinyLlama-1.1B-Chat-v1.0-GGUF/resolve/main/tinyllama-1.1b-chat-v1.0.Q2_K.gguf" }
+];
+
 const SECURE_CONNECTIONS = "raju_api_connections"; 
 const SECURE_ACTIVE_ENGINE = "raju_active_engine";
 const KHAZANA_DIR = FileSystem.documentDirectory + "Raju_Khazana/";
@@ -35,8 +38,10 @@ export default function App() {
   const [connections, setConnections] = useState([]); 
   const [activeEngineId, setActiveEngineId] = useState(null); 
   const [inputKey, setInputKey] = useState("");
+  const [inputModelId, setInputModelId] = useState(""); 
   const [isAddingApi, setIsAddingApi] = useState(false); 
   
+  const [selectedOfflineModel, setSelectedOfflineModel] = useState(OFFLINE_MODELS[0]);
   const [llamaContext, setLlamaContext] = useState(null);
   const [isModelLoaded, setIsModelLoaded] = useState(false);
   const [modelExists, setModelExists] = useState(false);
@@ -44,7 +49,7 @@ export default function App() {
   const [downloadProgress, setDownloadProgress] = useState(0);
   
   const [messages, setMessages] = useState([
-    { id: "1", role: "ai", text: "Namaste Raju Bhai! Gemini API fix ho gayi hai aur Download button bhi aa gaya hai." }
+    { id: "1", role: "ai", text: "Namaste Raju Bhai! Ab main Internet Search bhi kar sakta hu. Type karein: 'Search: Aaj ki news'" }
   ]);
   const [input, setInput] = useState("");
   const [isThinking, setIsThinking] = useState(false);
@@ -52,16 +57,25 @@ export default function App() {
 
   const [khazanaItems, setKhazanaItems] = useState([]);
   const [newFolderName, setNewFolderName] = useState("");
-  const modelPath = FileSystem.documentDirectory + MODEL_FILE_NAME;
+
+  const getModelPath = (filename) => FileSystem.documentDirectory + filename;
 
   useEffect(() => { 
-    checkModelExists();
+    checkModelExists(selectedOfflineModel);
     loadConnections(); 
     initKhazana(); 
   }, []);
 
-  const checkModelExists = async () => { 
-    const info = await FileSystem.getInfoAsync(modelPath); 
+  useEffect(() => { checkModelExists(selectedOfflineModel); }, [selectedOfflineModel]);
+
+  useEffect(() => {
+    if (inputKey.startsWith("AIza") && !inputModelId) setInputModelId("gemini-1.5-flash");
+    if (inputKey.startsWith("sk-") && !inputModelId) setInputModelId("gpt-3.5-turbo");
+    if (inputKey.startsWith("tvly-") && !inputModelId) setInputModelId("search-basic");
+  }, [inputKey]);
+
+  const checkModelExists = async (modelObj) => { 
+    const info = await FileSystem.getInfoAsync(getModelPath(modelObj.file)); 
     setModelExists(info.exists); 
   };
 
@@ -69,20 +83,17 @@ export default function App() {
     setIsDownloading(true);
     try {
       const downloadResumable = FileSystem.createDownloadResumable(
-        MODEL_URL, modelPath, {},
-        (downloadProgress) => {
-          const progress = downloadProgress.totalBytesWritten / downloadProgress.totalBytesExpectedToWrite;
+        selectedOfflineModel.url, getModelPath(selectedOfflineModel.file), {},
+        (progressInfo) => {
+          const progress = progressInfo.totalBytesWritten / progressInfo.totalBytesExpectedToWrite;
           setDownloadProgress(Math.round(progress * 100));
         }
       );
       await downloadResumable.downloadAsync();
       setModelExists(true);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    } catch (e) {
-      alert("Download failed: " + e.message);
-    }
-    setIsDownloading(false);
-    setDownloadProgress(0);
+    } catch (e) { alert("Download failed: " + e.message); }
+    setIsDownloading(false); setDownloadProgress(0);
   };
 
   const initKhazana = async () => {
@@ -92,8 +103,7 @@ export default function App() {
   };
 
   const loadKhazanaFiles = async () => {
-    try { const files = await FileSystem.readDirectoryAsync(KHAZANA_DIR); setKhazanaItems(files); } 
-    catch (e) { console.log(e); }
+    try { const files = await FileSystem.readDirectoryAsync(KHAZANA_DIR); setKhazanaItems(files); } catch (e) {}
   };
 
   const createFolderManually = async () => {
@@ -128,13 +138,14 @@ export default function App() {
     else if (keyToSave.startsWith("tvly-")) { provider = "Tavily Search"; type = "tool"; color = COLORS.tool; } 
     if (provider === "unknown") { alert("Unknown API Key!"); return; }
 
-    const newConn = { id: Date.now().toString(), provider, key: keyToSave, type, color };
+    const finalModelId = inputModelId.trim() || "default";
+    const newConn = { id: Date.now().toString(), provider, key: keyToSave, type, color, modelId: finalModelId };
     const updatedConns = [...connections, newConn];
     await SecureStore.setItemAsync(SECURE_CONNECTIONS, JSON.stringify(updatedConns));
     setConnections(updatedConns);
     
     if (type === "engine" && !activeEngineId) { setActiveEngineId(newConn.id); await SecureStore.setItemAsync(SECURE_ACTIVE_ENGINE, newConn.id); }
-    setInputKey(""); setIsAddingApi(false);
+    setInputKey(""); setInputModelId(""); setIsAddingApi(false);
   };
 
   const deleteConnection = async (id) => {
@@ -149,7 +160,7 @@ export default function App() {
   };
 
   const loadOfflineModel = async () => {
-    try { setIsThinking(true); const context = await initLlama({ model: modelPath, use_mlock: true, n_ctx: 1024 }); setLlamaContext(context); setIsModelLoaded(true); setUseCloud(false); setActiveTab("CHAT"); } 
+    try { setIsThinking(true); const context = await initLlama({ model: getModelPath(selectedOfflineModel.file), use_mlock: true, n_ctx: 1024 }); setLlamaContext(context); setIsModelLoaded(true); setUseCloud(false); setActiveTab("CHAT"); } 
     catch (e) { alert("Load Error: " + e.message); }
     setIsThinking(false);
   };
@@ -161,12 +172,44 @@ export default function App() {
     setInput(""); setIsThinking(true);
 
     const lowerText = userText.toLowerCase();
+
+    // 🌐 1. TAVILY INTERNET SEARCH INTERCEPT
+    if (lowerText.startsWith("search:") || lowerText.startsWith("net:")) {
+      const query = userText.substring(userText.indexOf(":") + 1).trim();
+      let tavilyConn = connections.find(c => c.provider === "Tavily Search");
+
+      if (!tavilyConn) {
+        setMessages(prev => [...prev, { id: Date.now().toString(), role: "ai", text: "⚠️ Settings mein pehle Tavily API Key (tvly-...) add karein." }]);
+        setIsThinking(false); return;
+      }
+
+      try {
+        const searchRes = await fetch("https://api.tavily.com/search", {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ api_key: tavilyConn.key, query: query, include_answer: true })
+        });
+        const searchData = await searchRes.json();
+        
+        // Extract best answer
+        let finalAnswer = searchData.answer;
+        if (!finalAnswer && searchData.results && searchData.results.length > 0) {
+           finalAnswer = searchData.results[0].content;
+        }
+
+        setMessages(prev => [...prev, { id: Date.now().toString(), role: "ai", text: `🌐 Search Result:\n\n${finalAnswer || "Kuch nahi mila."}`, routerStatus: "🔎 Tavily Internet" }]);
+      } catch (err) {
+         setMessages(prev => [...prev, { id: Date.now().toString(), role: "ai", text: `❌ Search Error: ${err.message}` }]);
+      }
+      setIsThinking(false); return;
+    }
+
+    // 📁 2. LOCAL KHAZANA INTERCEPTS
     if (lowerText.startsWith("folder banao:")) {
       const folderName = userText.split(":")[1].trim();
       if(folderName) {
          await FileSystem.makeDirectoryAsync(KHAZANA_DIR + folderName + "/", { intermediates: true });
          loadKhazanaFiles();
-         setMessages(prev => [...prev, { id: Date.now().toString(), role: "ai", text: `📁 Done! Khazana mein '${folderName}' folder ban gaya.`, routerStatus: "🛠️ Local System" }]);
+         setMessages(prev => [...prev, { id: Date.now().toString(), role: "ai", text: `📁 Done! '${folderName}' folder ban gaya.`, routerStatus: "🛠️ Local System" }]);
          setIsThinking(false); return;
       }
     }
@@ -176,18 +219,19 @@ export default function App() {
          const fileName = parts[0].replace("note likho:", "").trim() + ".txt";
          await FileSystem.writeAsStringAsync(KHAZANA_DIR + fileName, parts[1].trim());
          loadKhazanaFiles();
-         setMessages(prev => [...prev, { id: Date.now().toString(), role: "ai", text: `📝 Done! '${fileName}' Khazana mein save ho gai.`, routerStatus: "🛠️ Local System" }]);
+         setMessages(prev => [...prev, { id: Date.now().toString(), role: "ai", text: `📝 Done! '${fileName}' save ho gai.`, routerStatus: "🛠️ Local System" }]);
          setIsThinking(false); return;
       }
     }
 
+    // ☁️ 3. CLOUD ENGINE ROUTING
     if (useCloud) {
       let activeConn = connections.find(c => c.id === activeEngineId);
       if (!activeConn) { setMessages(prev => [...prev, { id: Date.now().toString(), role: "ai", text: "⚠️ Koi Active Engine select nahi kiya hai." }]); setIsThinking(false); return; }
       try {
         let aiResponseText = "";
         if (activeConn.provider === "Gemini") {
-          const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${activeConn.key}`, {
+          const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${activeConn.modelId}:generateContent?key=${activeConn.key}`, {
             method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ contents: [{ parts: [{ text: `${userText}\n(Respond briefly in Hindi)` }] }] })
           });
           const data = await response.json();
@@ -195,24 +239,27 @@ export default function App() {
           aiResponseText = data.candidates[0].content.parts[0].text;
         } else if (activeConn.provider === "OpenAI") {
           const response = await fetch(`https://api.openai.com/v1/chat/completions`, {
-            method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${activeConn.key}` }, body: JSON.stringify({ model: "gpt-3.5-turbo", messages: [{ role: "user", content: userText }] })
+            method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${activeConn.key}` }, body: JSON.stringify({ model: activeConn.modelId, messages: [{ role: "user", content: userText }] })
           });
           const data = await response.json();
           if (data.error) throw new Error(data.error.message);
           aiResponseText = data.choices[0].message.content;
         } else { aiResponseText = "⚠️ Ye engine abhi chat ke liye configure nahi hai."; }
-        setMessages(prev => [...prev, { id: Date.now().toString(), role: "ai", text: aiResponseText, routerStatus: `☁️ ${activeConn.provider}` }]);
+        setMessages(prev => [...prev, { id: Date.now().toString(), role: "ai", text: aiResponseText, routerStatus: `☁️ ${activeConn.modelId}` }]);
       } catch (error) { setMessages(prev => [...prev, { id: Date.now().toString(), role: "ai", text: `❌ API Error: ` + error.message }]); }
-    } else {
+    } 
+    
+    // 🧠 4. OFFLINE LLAMA ROUTING
+    else {
       if (!isModelLoaded || !llamaContext) { setMessages(prev => [...prev, { id: Date.now().toString(), role: "ai", text: "⚠️ Offline Model start nahi hua hai." }]); setIsThinking(false); return; }
       try {
-        const result = await llamaContext.completion({ prompt: `<|system|>\nYou are Raju AI. Keep answers short.\n</s>\n<|user|>\n${userText}</s>\n<|assistant|>\n`, n_predict: 150 });
-        setMessages(prev => [...prev, { id: Date.now().toString(), role: "ai", text: result.text.trim(), routerStatus: "🧠 Offline Llama" }]);
+        const result = await llamaContext.completion({ prompt: `<|im_start|>system\nYou are Raju AI, a highly intelligent assistant.<|im_end|>\n<|im_start|>user\n${userText}<|im_end|>\n<|im_start|>assistant\n`, n_predict: 200 });
+        setMessages(prev => [...prev, { id: Date.now().toString(), role: "ai", text: result.text.trim(), routerStatus: `🧠 ${selectedOfflineModel.name}` }]);
       } catch (error) { setMessages(prev => [...prev, { id: Date.now().toString(), role: "ai", text: "❌ Offline Error: " + error.message }]); }
     }
     setIsThinking(false);
   };
-    return (
+      return (
     <SafeAreaView style={styles.root}>
       <StatusBar barStyle="light-content" backgroundColor={COLORS.surface} />
       <View style={styles.header}><Text style={styles.headerTitle}>Raju AI</Text></View>
@@ -238,7 +285,7 @@ export default function App() {
           </ScrollView>
           <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"}>
             <View style={styles.inputContainer}>
-              <TextInput style={styles.textInput} placeholder="Ask anything or 'Folder banao: Name'" placeholderTextColor={COLORS.textMuted} value={input} onChangeText={setInput} multiline />
+              <TextInput style={styles.textInput} placeholder="Message, 'Search:..', ya 'Folder banao:..'" placeholderTextColor={COLORS.textMuted} value={input} onChangeText={setInput} multiline />
               <TouchableOpacity style={styles.sendButton} onPress={sendMessage} disabled={isThinking}><Text style={styles.sendIcon}>➤</Text></TouchableOpacity>
             </View>
           </KeyboardAvoidingView>
@@ -275,6 +322,13 @@ export default function App() {
           
           <View style={[styles.card, {marginBottom: 20}]}>
             <Text style={styles.cardTitle}>🧠 Offline Local Engine</Text>
+            <View style={{flexDirection: 'row', marginBottom: 15, backgroundColor: COLORS.background, borderRadius: 8}}>
+              {OFFLINE_MODELS.map(model => (
+                <TouchableOpacity key={model.id} onPress={() => setSelectedOfflineModel(model)} style={{flex: 1, padding: 10, alignItems: 'center', borderBottomWidth: selectedOfflineModel.id === model.id ? 2 : 0, borderColor: COLORS.primary}}>
+                  <Text style={{color: selectedOfflineModel.id === model.id ? COLORS.primary : COLORS.textMuted, fontSize: 12, fontWeight: 'bold'}}>{model.name}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
             {!modelExists ? (
               <View>
                 <Text style={{color: COLORS.textMuted, marginBottom: 10}}>Model not found on device.</Text>
@@ -298,7 +352,8 @@ export default function App() {
             </View>
             {isAddingApi && (
               <View style={{marginBottom: 20, padding: 15, backgroundColor: COLORS.background, borderRadius: 8, borderWidth: 1, borderColor: COLORS.cloud}}>
-                <TextInput style={styles.keyInput} placeholder="AIza..., sk-..., tvly-..." placeholderTextColor={COLORS.textMuted} value={inputKey} onChangeText={setInputKey} secureTextEntry />
+                <TextInput style={[styles.keyInput, {marginBottom: 10}]} placeholder="API Key (tvly-..., AIza...)" placeholderTextColor={COLORS.textMuted} value={inputKey} onChangeText={setInputKey} secureTextEntry />
+                <TextInput style={styles.keyInput} placeholder="Model (gemini-pro, search-basic)" placeholderTextColor={COLORS.textMuted} value={inputModelId} onChangeText={setInputModelId} />
                 <TouchableOpacity style={[styles.actionBtn, {backgroundColor: COLORS.cloud, marginTop: 10}]} onPress={saveNewConnection}><Text style={styles.actionBtnText}>Save</Text></TouchableOpacity>
               </View>
             )}
@@ -310,8 +365,16 @@ export default function App() {
                         <TouchableOpacity onPress={() => makeActiveEngine(conn.id)} style={{marginRight: 10}}>
                             <View style={{width: 20, height: 20, borderRadius: 10, borderWidth: 2, borderColor: conn.color, justifyContent: 'center', alignItems: 'center'}}>{activeEngineId === conn.id && <View style={{width: 10, height: 10, borderRadius: 5, backgroundColor: conn.color}} />}</View>
                         </TouchableOpacity>
-                        <Text style={{color: COLORS.textMain, fontWeight: 'bold'}}>{conn.provider}</Text>
+                        <View><Text style={{color: COLORS.textMain, fontWeight: 'bold'}}>{conn.provider}</Text><Text style={{color: COLORS.textMuted, fontSize: 12}}>{conn.modelId}</Text></View>
                     </View>
+                    <TouchableOpacity onPress={() => deleteConnection(conn.id)}><Text style={{color: COLORS.danger}}>🗑️</Text></TouchableOpacity>
+                </View>
+            ))}
+            
+            <Text style={{color: COLORS.textMuted, fontWeight: 'bold', marginTop: 15}}>🛠️ TOOLS (Skills)</Text>
+            {connections.filter(c => c.type === 'tool').map((conn) => (
+                <View key={conn.id} style={{flexDirection: 'row', justifyContent: 'space-between', padding: 12, borderRadius: 8, marginVertical: 5, borderWidth: 1, borderColor: conn.color}}>
+                    <View><Text style={{color: COLORS.textMain, fontWeight: 'bold'}}>🔎 {conn.provider}</Text></View>
                     <TouchableOpacity onPress={() => deleteConnection(conn.id)}><Text style={{color: COLORS.danger}}>🗑️</Text></TouchableOpacity>
                 </View>
             ))}
@@ -357,4 +420,4 @@ const styles = StyleSheet.create({
   navItem: { flex: 1, alignItems: "center", justifyContent: "center" },
   navIcon: { fontSize: 22, marginBottom: 4 }
 });
-      
+  
